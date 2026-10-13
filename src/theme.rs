@@ -5,7 +5,7 @@ mod scheme;
 use amane::{Color, Palette, Service};
 
 use hsl::Hsl;
-use scheme::{CATPPUCCIN, GRUVBOX, Scheme};
+use scheme::Scheme;
 
 use crate::settings::Settings;
 
@@ -57,10 +57,11 @@ pub fn current() -> Theme {
 pub fn for_mode(forced: Option<bool>) -> Theme {
     let settings = Settings::read();
 
-    match settings.text("scheme") {
-        "gruvbox" => return fixed(&GRUVBOX),
-        "catppuccin" => return fixed(&CATPPUCCIN),
-        _ => {}
+    let scheme_name = settings.text("scheme");
+    if scheme_name != "dynamic" && !scheme_name.is_empty() {
+        if let Some(scheme) = scheme::find(scheme_name) {
+            return fixed(scheme);
+        }
     }
 
     let tuning = Tuning {
@@ -145,7 +146,7 @@ pub fn for_mode(forced: Option<bool>) -> Theme {
 // a fixed scheme is always dark; selected sits between the surface and its hover
 fn fixed(scheme: &Scheme) -> Theme {
     Theme {
-        light: false,
+        light: scheme.light,
         background: scheme.background,
         surface: scheme.surface,
         hover_surface: scheme.hover_surface,

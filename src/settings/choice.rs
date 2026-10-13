@@ -1,5 +1,5 @@
 use amane::{
-    Center, Column, Padding, Pointer, Rectangle, Row, Service, SpaceBetween, Start, Text, Weight,
+    Center, Column, Padding, Pointer, Rectangle, Row, ScrollArea, Service, SpaceBetween, Start, Text, Weight,
     Widget, children,
 };
 
@@ -9,7 +9,7 @@ use crate::fonts;
 use crate::motion;
 use crate::theme;
 
-const WIDTH: f32 = 164.0;
+const WIDTH: f32 = 196.0;
 const RADIUS: f32 = 12.0;
 
 const MENU_GAP: f32 = 8.0;
@@ -60,13 +60,14 @@ pub fn add(
     let x = page.width - row::SIDE - WIDTH;
     let y = top + (row::HEIGHT - row::CONTROL_HEIGHT) / 2.0 + row::CONTROL_HEIGHT + MENU_GAP;
 
-    let menu = menu(page, key, options, &staged, open);
+    let total_height = options.len() as f32 * row::CONTROL_HEIGHT + MENU_PADDING * 2.0;
+    let menu_height = total_height.min(320.0);
 
-    let height = options.len() as f32 * row::CONTROL_HEIGHT + MENU_PADDING * 2.0;
+    let menu = menu(page, key, options, &staged, open, menu_height, total_height);
 
     page.menu(
         menu.opacity(amount).scale(0.97 + 0.03 * amount).translate(x, y),
-        y + height,
+        y + menu_height,
     );
 }
 
@@ -125,6 +126,8 @@ fn menu(
     options: &'static [(&'static str, &'static str)],
     staged: &str,
     open: bool,
+    menu_height: f32,
+    total_height: f32,
 ) -> Rectangle {
     let theme = page.theme;
 
@@ -193,11 +196,11 @@ fn menu(
         items.push(Box::new(item));
     }
 
-    let height = options.len() as f32 * row::CONTROL_HEIGHT + MENU_PADDING * 2.0;
+    let col = Column::new(items);
 
-    Rectangle::new()
+    let container = Rectangle::new()
         .width(WIDTH)
-        .height(height)
+        .height(menu_height)
         .radius(RADIUS)
         .fill(high_surface(theme))
         .padding(Padding {
@@ -205,8 +208,16 @@ fn menu(
             right: MENU_PADDING,
             bottom: MENU_PADDING,
             left: MENU_PADDING,
-        })
-        .child(Column::new(items))
+        });
+
+    if total_height > 320.0 {
+        let scroll = ScrollArea::new(key, col)
+            .width(option_width)
+            .height(menu_height - MENU_PADDING * 2.0);
+        container.child(scroll)
+    } else {
+        container.child(col)
+    }
 }
 
 // one menu is open at a time, opening another closes it

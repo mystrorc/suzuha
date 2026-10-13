@@ -61,6 +61,16 @@ pub fn close() {
     Lock::start();
 }
 
+// brings the desktop back directly (e.g. on session unlock)
+pub fn open() {
+    Curtain::write().dark.to(0.0);
+
+    let mut curtain = Curtain::write();
+
+    curtain.items.to(1.0);
+    curtain.closing = false;
+}
+
 // waits on pam, then brings the desktop back if the password was right
 pub fn open_when_accepted() {
     while Lock::read().checking() {

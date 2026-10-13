@@ -1,4 +1,5 @@
 mod art;
+pub mod audio_eq;
 mod cava;
 mod fader;
 mod media;
@@ -6,7 +7,9 @@ mod player;
 mod visualizer;
 pub mod wave;
 
-use amane::{Audio, Center, Padding, Rectangle, Row, Service, children};
+use amane::{Audio, Center, Padding, Pointer, Rectangle, Row, Service, Text, Weight, Widget, children};
+
+use crate::fonts;
 
 use super::{Overlay, PanelView, Region};
 use crate::liquid::{self, Blob};
@@ -82,10 +85,86 @@ pub fn view(overlay: &Overlay, theme: &Theme, screen: Region) -> Option<PanelVie
     Some(PanelView { blob, input, reach })
 }
 
+pub fn tabs(overlay: &Overlay, theme: &Theme) -> Row {
+    let now_playing = tab_button(
+        theme,
+        "󰎆",
+        "Now Playing",
+        overlay.control_tab == 0,
+        || Overlay::set_control_tab(0),
+    );
+    let audio_eq = tab_button(
+        theme,
+        "󰓃",
+        "Audio & EQ",
+        overlay.control_tab == 1,
+        || Overlay::set_control_tab(1),
+    );
+
+    Row::new(children![now_playing, audio_eq])
+        .gap(6.0)
+        .align(Center)
+}
+
+fn tab_button(
+    theme: &Theme,
+    icon: &str,
+    label: &str,
+    active: bool,
+    on_click: impl Fn() + 'static,
+) -> Rectangle {
+    let fill = if active {
+        theme.selected_surface
+    } else {
+        amane::Color::TRANSPARENT
+    };
+    let text_color = if active {
+        theme.text
+    } else {
+        theme.muted_text
+    };
+
+    let icon_w = Text::new(icon)
+        .size(13.0)
+        .font(fonts::NERD)
+        .tight()
+        .color(if active { theme.accent } else { theme.secondary_text });
+
+    let label_w = Text::new(label)
+        .size(12.0)
+        .font(fonts::BODY)
+        .weight(if active { Weight::SemiBold } else { Weight::Regular })
+        .color(text_color);
+
+    let row = Row::new(children![icon_w, label_w]).gap(6.0).align(Center);
+    let width = label.chars().count() as f32 * 7.5 + 38.0;
+
+    Rectangle::new()
+        .width(width)
+        .height(26.0)
+        .radius(8.0)
+        .fill(fill)
+        .padding(Padding {
+            top: 4.0,
+            bottom: 4.0,
+            left: 10.0,
+            right: 10.0,
+        })
+        .cursor(Pointer)
+        .on_click(move |_| on_click())
+        .align_child(Center, Center)
+        .child(row)
+}
+
 fn content(overlay: &Overlay, theme: &Theme, width: f32) -> Rectangle {
     let card_width = width - PADDING.left - PADDING.right - FADERS_WIDTH - GAP;
 
-    let row = Row::new(children![faders(theme), media::view(overlay, theme, card_width, INNER_HEIGHT)]).gap(GAP);
+    let right_card: Box<dyn Widget> = match overlay.control_tab {
+        1 => Box::new(audio_eq::view(overlay, theme, card_width, INNER_HEIGHT)),
+        _ => Box::new(media::view(overlay, theme, card_width, INNER_HEIGHT)),
+    };
+
+    let row = Row::new(vec![Box::new(faders(theme)) as Box<dyn Widget>, right_card]).gap(GAP);
 
     Rectangle::new()
         .width(width)

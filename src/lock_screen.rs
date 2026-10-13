@@ -24,7 +24,7 @@ const WHITE: Color = Color::rgb(0xf7, 0xf7, 0xf7);
 // the wallpaper is darkened this much, so white text reads on any picture
 pub const DIM: u8 = 122;
 
-const LOCK_ICON: &str = "󰌾";
+const LOCK_ICON: &str = "\u{f0d3e}";
 
 // on every monitor while the session is locked
 pub fn view(monitor: &Monitor) -> LayerWindow {
@@ -115,8 +115,14 @@ fn unlock(width: f32, height: f32) -> Stack {
     Stack::new(children![block, hint]).width(width).height(height)
 }
 
-// locks the session, the same as `loginctl lock-session`
-pub fn ipc(_arguments: &[String]) -> String {
+// locks the session, the same as `loginctl lock-session`, or unlocks if requested
+pub fn ipc(arguments: &[String]) -> String {
+    if arguments.first().map(|s| s.as_str()) == Some("unlock") {
+        thread::spawn(curtain::open);
+
+        return String::from("ok");
+    }
+
     thread::spawn(logind::start);
 
     String::from("ok")

@@ -1,9 +1,9 @@
 use amane::{
-    Center, Color, Full, Monitor, Parent, Pointer, Rectangle, Row, Service, Stack, Start, Text,
-    Weight, Widget, Workspace, Workspaces,
+    Center, Color, Full, Media, Monitor, Parent, Pointer, Rectangle, Row, Service, Stack, Start, Text,
+    Weight, Widget, Workspace, Workspaces, children,
 };
 
-use super::{motion, star};
+use super::{motion, pill, star};
 use crate::fonts;
 use crate::overlay::Overlay;
 use crate::settings::Settings;
@@ -12,6 +12,10 @@ use crate::theme::Theme;
 // the logo and the inactive dot, the active star is drawn in star.rs
 const LOGO: &str = "\u{f1105}";
 const INACTIVE: &str = "\u{f444}";
+const MEDIA_ICON: &str = "󰎈";
+
+// longer song text is cut off
+const MEDIA_TEXT_WIDTH: f32 = 180.0;
 
 // every workspace is a 26px slot, 4px apart, inside a 32px pill
 const SLOT: f32 = 26.0;
@@ -44,12 +48,6 @@ pub fn view(monitor: &Monitor, theme: &Theme, width: f32) -> Row {
         .align_child(Center, Center)
         .child(Text::new(LOGO).size(28.0).font(fonts::NERD).color(theme.accent));
 
-    let name = Text::new(active_name(&own))
-        .size(14.0)
-        .font(fonts::BODY)
-        .weight(Weight::Medium)
-        .color(theme.text);
-
     let settings = Settings::read();
 
     let mut items: Vec<Box<dyn Widget>> = vec![Box::new(Rectangle::new().width(EDGE).height(1.0))];
@@ -62,8 +60,9 @@ pub fn view(monitor: &Monitor, theme: &Theme, width: f32) -> Row {
         items.push(Box::new(strip(monitor, &own, theme, settings.text("workspace_style"))));
     }
 
-    if settings.flag("bar_workspace_name") {
-        items.push(Box::new(name));
+    // Now playing media moved to left side
+    if settings.flag("bar_media") {
+        items.push(Box::new(media(theme)));
     }
 
     Row::new(items)
@@ -72,6 +71,41 @@ pub fn view(monitor: &Monitor, theme: &Theme, width: f32) -> Row {
         .gap(10.0)
         .justify(Start)
         .align(Center)
+}
+
+// "artist - title", or "No media" while nothing plays
+fn media(theme: &Theme) -> Rectangle {
+    let media = Media::read();
+
+    let text = if media.title().is_empty() {
+        String::from("No media")
+    } else if media.artist().is_empty() {
+        String::from(media.title())
+    } else {
+        format!("{} - {}", media.artist(), media.title())
+    };
+
+    let text_width = pill::text_width(&text, 13.0).min(MEDIA_TEXT_WIDTH);
+
+    let icon = Text::new(MEDIA_ICON)
+        .size(14.0)
+        .font(fonts::NERD)
+        .color(theme.success);
+
+    let label = Rectangle::new()
+        .width(text_width)
+        .height(Parent)
+        .align_child(amane::Start, Center)
+        .child(pill::label(&text, 13.0, theme.text).elide());
+
+    // the icon is about 9px wide, then a 7px gap and 20px of padding
+    let width = 9.0 + 7.0 + text_width + 20.0;
+
+    pill::view(width, theme.surface)
+        .cursor(Pointer)
+        .on_click(|_| Media::play_pause())
+        .align_child(Center, Center)
+        .child(Row::new(children![icon, label]).gap(7.0).align(Center))
 }
 
 // the dots or numbers, with the sliding accent highlight drawn over them
@@ -162,22 +196,4 @@ fn number(index: usize, color: Color) -> Text {
         .weight(Weight::Bold)
         .tight()
         .color(color)
-}
-
-// the workspace's own name, or "Workspace 2" when it has none
-fn active_name(workspaces: &[&Workspace]) -> String {
-    for workspace in workspaces {
-        if !workspace.active() {
-            continue;
-        }
-
-        let index = workspace.index().to_string();
-
-        return match workspace.name() {
-            Some(name) if !name.is_empty() && name != index => String::from(name),
-            _ => format!("Workspace {index}"),
-        };
-    }
-
-    String::from("Desktop")
 }

@@ -1,11 +1,14 @@
+pub mod audio_control;
 pub mod control_center;
 pub mod launcher;
 pub mod dismiss;
 mod panel;
 mod popups;
+pub mod power_devices;
 pub mod power_menu;
 mod region;
 mod state;
+pub mod sysmon;
 pub mod utility;
 
 use amane::{
@@ -63,6 +66,18 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
     }
 
     if let Some(panel) = control_center::view(&overlay, &theme, screen) {
+        panels.push(panel);
+    }
+
+    if let Some(panel) = audio_control::view(&overlay, &theme, screen) {
+        panels.push(panel);
+    }
+
+    if let Some(panel) = sysmon::view(&overlay, &theme, screen) {
+        panels.push(panel);
+    }
+
+    if let Some(panel) = power_devices::view(&overlay, &theme, screen) {
         panels.push(panel);
     }
 

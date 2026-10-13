@@ -6,6 +6,7 @@ mod colors;
 mod floating;
 mod integrations;
 mod launcher;
+mod plugins;
 mod user;
 mod wallpaper;
 mod weather;
@@ -28,6 +29,7 @@ pub fn build(shown: Shown, page: &mut Page) {
         Shown::Floating => floating::build(page),
         Shown::Weather => weather::build(page),
         Shown::Integrations => integrations::build(page),
+        Shown::Plugins => plugins::build(page),
         Shown::About => about::build(page),
     }
 }

@@ -85,11 +85,12 @@ pub enum Page {
     Floating,
     Weather,
     Integrations,
+    Plugins,
     About,
 }
 
 // every page in the list's order, with its icon, label and the line under its title
-const PAGES: [(Page, &str, &str, &str); 11] = [
+const PAGES: [(Page, &str, &str, &str); 12] = [
     (Page::User, "󰀄", "User info", "Choose the name and profile picture shown on the lock screen."),
     (Page::Appearance, "󰍹", "Appearance", "Tune the shell's surfaces and blur."),
     (
@@ -139,6 +140,12 @@ const PAGES: [(Page, &str, &str, &str); 11] = [
         "󰌹",
         "Integrations",
         "Keep supported applications in sync with the current shell palette.",
+    ),
+    (
+        Page::Plugins,
+        "󰐱",
+        "Plugins",
+        "Manage converted Omarchy plugins, panel flyouts, and Equalizer audio controls.",
     ),
     (Page::About, "󰋼", "About", "Inspect the running setup or reset settings."),
 ];

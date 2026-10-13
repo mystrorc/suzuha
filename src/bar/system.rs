@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 
 use amane::{
-    Battery, Center, Color, End, Memory, Padding, Parent, Pointer, Rectangle, Row, Service,
+    Battery, Button, Center, Color, End, Memory, Padding, Parent, Pointer, Rectangle, Row, Service,
     SpaceBetween, Stack, Text, Widget, children,
 };
 
@@ -84,7 +84,7 @@ fn indicator(value: f32, color: Color, icon: &str, text: &str, theme: &Theme) ->
 }
 
 // none on a desktop without a battery
-fn battery(theme: &Theme) -> Option<Row> {
+fn battery(theme: &Theme) -> Option<Rectangle> {
     let battery = Battery::read();
 
     if !battery.present() {
@@ -107,7 +107,21 @@ fn battery(theme: &Theme) -> Option<Row> {
 
     let value = f32::from(percent) / 100.0;
 
-    Some(indicator(value, color, icon, &text, theme))
+    let ind = indicator(value, color, icon, &text, theme);
+
+    let text_w = pill::text_width(&text, 14.0);
+    let width = RING_SIZE + 6.0 + text_w + 16.0;
+
+    Some(
+        pill::view(width, theme.surface)
+            .cursor(Pointer)
+            .on_click(|button| match button {
+                Button::Left => Overlay::toggle_power_devices(),
+                _ => {}
+            })
+            .align_child(Center, Center)
+            .child(ind),
+    )
 }
 
 // one glyph per 10%
@@ -130,7 +144,7 @@ fn battery_icon(percent: u8, charging: bool) -> &'static str {
     }
 }
 
-fn memory(theme: &Theme) -> Row {
+fn memory(theme: &Theme) -> Rectangle {
     let memory = Memory::read();
 
     let usage = f32::from(memory.percent()) / 100.0;
@@ -148,7 +162,19 @@ fn memory(theme: &Theme) -> Row {
 
     let text = format!("{gibibytes:.1}G");
 
-    indicator(usage, color, MEMORY_ICON, &text, theme)
+    let ind = indicator(usage, color, MEMORY_ICON, &text, theme);
+
+    let text_w = pill::text_width(&text, 14.0);
+    let width = RING_SIZE + 6.0 + text_w + 16.0;
+
+    pill::view(width, theme.surface)
+        .cursor(Pointer)
+        .on_click(|button| match button {
+            Button::Left => Overlay::toggle_sysmon(),
+            _ => {}
+        })
+        .align_child(Center, Center)
+        .child(ind)
 }
 
 // opens the utility center, and grows to the left with the time while a recording runs

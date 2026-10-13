@@ -41,6 +41,10 @@ fn main() {
     // writes the theme out to the programs turned on under integrations
     drop(Export::read());
 
+    // pre-initialize background services for system monitor and audio control
+    drop(overlay::sysmon::SysmonData::read());
+    drop(overlay::audio_control::AudioDevices::read());
+
     App::new()
         .font(fonts::BODY)
         .window_per_monitor(wallpaper::view)
@@ -57,6 +61,9 @@ fn main() {
         .ipc("launcher", overlay::launcher::ipc)
         .ipc("utility", overlay::utility::ipc)
         .ipc("control", overlay::control_center::ipc)
+        .ipc("sysmon", overlay::sysmon::ipc)
+        .ipc("power", overlay::power_devices::ipc)
+        .ipc("audio_control", overlay::audio_control::ipc)
         .ipc("settings", settings::ipc)
         .ipc("lock", lock_screen::ipc)
         .ipc("wallpaper", wallpaper::picker::ipc)

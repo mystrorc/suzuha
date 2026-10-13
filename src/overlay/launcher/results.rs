@@ -97,13 +97,33 @@ fn apps(search: &str) -> Vec<Entry> {
         });
     }
 
+    let amane_match = search.is_empty()
+        || "amane settings".contains(search)
+        || "suzuha settings".contains(search)
+        || "settings".contains(search)
+        || "suzuha".contains(search)
+        || "amane".contains(search);
+
+    if amane_match {
+        found.push(Entry {
+            name: String::from("Amane Settings"),
+            description: if described {
+                Some(String::from("Shell settings and preferences"))
+            } else {
+                None
+            },
+            glyph: Some("\u{f0493}"),
+            kind: Kind::Settings,
+        });
+    }
+
     found
 }
 
 // the commands turned on in the settings
 fn commands(search: &str) -> Vec<Entry> {
     let all = [
-        ("Settings", "\u{f0493}", "command_settings", Kind::Settings),
+        ("Amane Settings", "\u{f0493}", "command_settings", Kind::Settings),
         ("Color scheme", "\u{f03d8}", "command_colors", Kind::Colors),
         ("Tmux sessions", "\u{f018d}", "command_tmux", Kind::TmuxCommand),
         ("Wallpapers", "\u{f02e9}", "command_wallpapers", Kind::Wallpapers),

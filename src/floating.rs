@@ -1,7 +1,7 @@
 mod card;
 mod memory;
 mod placement;
-mod sensors;
+pub mod sensors;
 mod weather;
 
 use std::collections::HashMap;

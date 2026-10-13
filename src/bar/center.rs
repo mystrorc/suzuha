@@ -1,19 +1,13 @@
 use amane::{
-    Audio, Center, Media, Parent, Pointer, Rectangle, Row, Scroll, Service, Text, Widget,
+    Audio, Button, Center, Parent, Pointer, Rectangle, Row, Scroll, Service, Widget,
     children,
 };
 
 use super::{pill, ring, timer};
 use crate::clock::Clock;
 use crate::settings::Settings;
-use crate::fonts;
 use crate::overlay::Overlay;
 use crate::theme::Theme;
-
-const MEDIA_ICON: &str = "󰎈";
-
-// longer song text is cut off
-const MEDIA_TEXT_WIDTH: f32 = 180.0;
 
 const RING_SIZE: f32 = 18.0;
 const RING_THICKNESS: f32 = 4.0;
@@ -25,7 +19,6 @@ pub fn view(theme: &Theme, width: f32) -> Row {
     let settings = Settings::read();
 
     let show_audio = settings.flag("bar_audio");
-    let show_media = settings.flag("bar_media");
     let show_clock = settings.flag("bar_clock");
 
     // the clock reads the settings again, so this read ends first
@@ -35,10 +28,6 @@ pub fn view(theme: &Theme, width: f32) -> Row {
 
     if show_audio {
         items.push(Box::new(audio(theme)));
-    }
-
-    if show_media {
-        items.push(Box::new(media(theme)));
     }
 
     if let Some(timer) = timer::view(theme) {
@@ -57,7 +46,7 @@ pub fn view(theme: &Theme, width: f32) -> Row {
         .align(Center)
 }
 
-// the speaker and microphone rings, scroll over one to change its level, click to open the control center
+// the speaker ring only on the bar (microphone remains in pulldown tab), scroll to change level, click to open control center
 fn audio(theme: &Theme) -> Rectangle {
     let audio = Audio::read();
 
@@ -67,14 +56,7 @@ fn audio(theme: &Theme) -> Rectangle {
         theme.accent
     };
 
-    let microphone_color = if audio.microphone_muted() {
-        theme.muted_text
-    } else {
-        theme.accent
-    };
-
     let speaker_value = f32::from(audio.volume()) / 100.0;
-    let microphone_value = f32::from(audio.microphone_volume()) / 100.0;
 
     let speaker = Rectangle::new()
         .width(RING_SIZE)
@@ -82,61 +64,24 @@ fn audio(theme: &Theme) -> Rectangle {
         .on_scroll(scroll_volume)
         .child(ring::view(RING_SIZE, RING_THICKNESS, speaker_value, speaker_color, theme.border));
 
-    let microphone = Rectangle::new()
-        .width(RING_SIZE)
-        .height(RING_SIZE)
-        .on_scroll(scroll_microphone)
-        .child(ring::view(
-            RING_SIZE,
-            RING_THICKNESS,
-            microphone_value,
-            microphone_color,
-            theme.border,
-        ));
-
-    // two rings 8px apart, plus 16px of padding
-    let width = RING_SIZE * 2.0 + 8.0 + 16.0;
+    // one ring plus 16px of padding
+    let width = RING_SIZE + 16.0;
 
     pill::view(width, theme.surface)
         .cursor(Pointer)
-        .on_click(|_| Overlay::toggle_control_center())
+        .on_click(|button| match button {
+            Button::Left => Overlay::toggle_control_center(),
+            Button::Right => {
+                if Overlay::read().control_center.shown && Overlay::read().control_tab == 1 {
+                    Overlay::toggle_control_center();
+                } else {
+                    Overlay::open_control_tab(1);
+                }
+            }
+            _ => {}
+        })
         .align_child(Center, Center)
-        .child(Row::new(children![speaker, microphone]).gap(8.0).align(Center))
-}
-
-// "artist - title", or "No media" while nothing plays
-fn media(theme: &Theme) -> Rectangle {
-    let media = Media::read();
-
-    let text = if media.title().is_empty() {
-        String::from("No media")
-    } else if media.artist().is_empty() {
-        String::from(media.title())
-    } else {
-        format!("{} - {}", media.artist(), media.title())
-    };
-
-    let text_width = pill::text_width(&text, 13.0).min(MEDIA_TEXT_WIDTH);
-
-    let icon = Text::new(MEDIA_ICON)
-        .size(14.0)
-        .font(fonts::NERD)
-        .color(theme.success);
-
-    let label = Rectangle::new()
-        .width(text_width)
-        .height(Parent)
-        .align_child(amane::Start, Center)
-        .child(pill::label(&text, 13.0, theme.text).elide());
-
-    // the icon is about 9px wide, then a 7px gap and 20px of padding
-    let width = 9.0 + 7.0 + text_width + 20.0;
-
-    pill::view(width, theme.surface)
-        .cursor(Pointer)
-        .on_click(|_| Media::play_pause())
-        .align_child(Center, Center)
-        .child(Row::new(children![icon, label]).gap(7.0).align(Center))
+        .child(speaker)
 }
 
 // "09:05 PM  •  Tuesday, 29 Sep 2026", plain text with 8px in front, no pill
@@ -158,12 +103,6 @@ fn scroll_volume(scroll: Scroll) {
     let volume = i32::from(Audio::read().volume());
 
     Audio::set_volume(step(volume, scroll));
-}
-
-fn scroll_microphone(scroll: Scroll) {
-    let volume = i32::from(Audio::read().microphone_volume());
-
-    Audio::set_microphone_volume(step(volume, scroll));
 }
 
 // wheel up is a negative y, which turns the level up

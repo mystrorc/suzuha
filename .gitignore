@@ -1,3 +1,4 @@
 REWRITE.md
 target/
 Cargo.toml
+eq.toml

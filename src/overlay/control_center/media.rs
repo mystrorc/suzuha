@@ -57,7 +57,11 @@ pub fn view(overlay: &Overlay, theme: &Theme, width: f32, height: f32) -> Stack 
     let inner_width = width - side_padding * 2.0;
     let inner_height = height - PADDING * 2.0;
 
-    let art_size = (inner_width * 0.36).clamp(112.0, 220.0).min(inner_height);
+    let header_height: f32 = 26.0;
+    let header_gap: f32 = 8.0;
+    let player_height = inner_height - header_height - header_gap;
+
+    let art_size = (inner_width * 0.36).clamp(100.0, 160.0).min(player_height);
 
     let details_width = inner_width - art_size - GAP;
 
@@ -65,18 +69,22 @@ pub fn view(overlay: &Overlay, theme: &Theme, width: f32, height: f32) -> Stack 
 
     let row = Row::new(children![
         cover(player, theme, art_size),
-        details(overlay, player, theme, details_width, inner_height),
+        details(overlay, player, theme, details_width, player_height),
     ])
     .gap(GAP)
     .align(Center);
 
     let content = Rectangle::new()
         .width(inner_width)
-        .height(inner_height)
+        .height(player_height)
         .translate(switch * SWITCH_DISTANCE, 0.0)
         .opacity(1.0 - switch.abs())
         .align_child(Start, Center)
         .child(row);
+
+    let tabs = super::tabs(overlay, theme);
+
+    let col = Column::new(children![tabs, content]).gap(header_gap);
 
     let card = Rectangle::new()
         .width(width)
@@ -89,7 +97,7 @@ pub fn view(overlay: &Overlay, theme: &Theme, width: f32, height: f32) -> Stack 
             bottom: PADDING,
             left: side_padding,
         })
-        .child(content);
+        .child(col);
 
     let mut layers: Vec<Box<dyn Widget>> = vec![Box::new(card)];
 

@@ -1,4 +1,5 @@
 use std::process;
+use std::thread;
 
 use amane::{Argument, Bus, Service};
 
@@ -30,6 +31,20 @@ impl Service for Logind {
 
         // outside a logind session, any session's lock request is taken
         let session = String::from(session.text());
+
+        let unlock_session = session.clone();
+
+        thread::spawn(move || {
+            let bus = Bus::system();
+
+            for signal in bus.signals(SESSION, "Unlock") {
+                if !unlock_session.is_empty() && signal.path() != unlock_session {
+                    continue;
+                }
+
+                curtain::open();
+            }
+        });
 
         for signal in bus.signals(SESSION, "Lock") {
             if !session.is_empty() && signal.path() != session {

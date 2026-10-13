@@ -9,6 +9,43 @@ const SWATCH_WIDTH: f32 = 28.0;
 const SWATCH_HEIGHT: f32 = 44.0;
 const SWATCH_GAP: f32 = 7.0;
 
+const SCHEMES: [(&str, &str); 34] = [
+    ("Dynamic (Wallpaper)", "dynamic"),
+    ("Nord", "nord"),
+    ("Dracula", "dracula"),
+    ("Catppuccin (Mocha)", "catppuccin"),
+    ("Catppuccin Macchiato", "catppuccin_macchiato"),
+    ("Catppuccin Frappe", "catppuccin_frappe"),
+    ("Catppuccin Latte", "catppuccin_latte"),
+    ("Eldritch", "eldritch"),
+    ("Wayle", "wayle"),
+    ("Tokyo Night", "tokyo_night"),
+    ("Tokyo Night Storm", "tokyo_night_storm"),
+    ("Everforest Dark", "everforest_dark"),
+    ("Everforest Light", "everforest_light"),
+    ("Gruvbox Dark", "gruvbox_dark"),
+    ("Gruvbox Light", "gruvbox_light"),
+    ("Kanagawa Wave", "kanagawa_wave"),
+    ("Kanagawa Dragon", "kanagawa_dragon"),
+    ("Monokai", "monokai"),
+    ("Monokai Pro", "monokai_pro"),
+    ("One Dark", "one_dark"),
+    ("One Light", "one_light"),
+    ("Rosé Pine", "rose_pine"),
+    ("Rosé Pine Moon", "rose_pine_moon"),
+    ("Rosé Pine Dawn", "rose_pine_dawn"),
+    ("Solarized Dark", "solarized_dark"),
+    ("Solarized Light", "solarized_light"),
+    ("Nightfox", "nightfox"),
+    ("Carbonfox", "carbonfox"),
+    ("Duskfox", "duskfox"),
+    ("Nordfox", "nordfox"),
+    ("Ayu Dark", "ayu_dark"),
+    ("Ayu Mirage", "ayu_mirage"),
+    ("Zenwritten Dark", "zenwritten_dark"),
+    ("Zenwritten Light", "zenwritten_light"),
+];
+
 const PREVIEW_HEIGHT: f32 = 116.0;
 
 const ACCENTS: [(&str, &str); 7] = [
@@ -31,7 +68,7 @@ pub fn build(page: &mut Page) {
         "scheme",
         "Color scheme",
         "Choose the palette family used by the shell",
-        &[("Dynamic", "dynamic"), ("Gruvbox", "gruvbox"), ("Catppuccin", "catppuccin")],
+        &SCHEMES,
     );
 
     choice::add(
