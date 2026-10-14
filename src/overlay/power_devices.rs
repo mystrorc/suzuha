@@ -11,7 +11,7 @@ use crate::liquid::{self, Blob};
 use crate::theme::Theme;
 
 const WIDTH: f32 = 350.0;
-const HEIGHT: f32 = 380.0;
+const HEIGHT: f32 = 422.0;
 const RADIUS: f32 = 28.0;
 
 const EDGE_OVERLAP: f32 = 40.0;
@@ -49,11 +49,23 @@ pub struct PowerDevice {
     pub details: String,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct PowerDevicesData {
     pub ac_online: bool,
+    pub active_profile: String,
     pub laptop_battery: Option<PowerDevice>,
     pub peripherals: Vec<PowerDevice>,
+}
+
+impl Default for PowerDevicesData {
+    fn default() -> Self {
+        Self {
+            ac_online: false,
+            active_profile: String::from("balanced"),
+            laptop_battery: None,
+            peripherals: Vec::new(),
+        }
+    }
 }
 
 impl Service for PowerDevicesData {
@@ -72,7 +84,29 @@ impl Service for PowerDevicesData {
         self.ac_online = ac_online;
         self.laptop_battery = laptop;
         self.peripherals = peripherals;
+        self.active_profile = query_active_profile();
         true
+    }
+}
+
+impl PowerDevicesData {
+    pub fn set_profile(profile: &'static str) {
+        Self::write().active_profile = profile.to_string();
+
+        std::thread::spawn(move || {
+            let _ = Command::new("busctl")
+                .args([
+                    "--system",
+                    "set-property",
+                    "net.hadess.PowerProfiles",
+                    "/net/hadess/PowerProfiles",
+                    "net.hadess.PowerProfiles",
+                    "ActiveProfile",
+                    "s",
+                    profile,
+                ])
+                .status();
+        });
     }
 }
 
@@ -250,12 +284,13 @@ fn laptop_card(theme: &Theme) -> Rectangle {
         .fill(color);
 
     let bar = amane::Stack::new(children![track, filled]).width(CARD_INNER_WIDTH).height(bar_height);
+    let switcher = power_profile_switcher(theme, &data.active_profile);
 
-    let card_content = Column::new(children![top_row, bar]).gap(10.0);
+    let card_content = Column::new(children![top_row, bar, switcher]).gap(9.0);
 
     Rectangle::new()
         .width(INNER_WIDTH)
-        .height(100.0)
+        .height(138.0)
         .radius(16.0)
         .fill(theme.surface)
         .padding(Padding {
@@ -265,6 +300,86 @@ fn laptop_card(theme: &Theme) -> Rectangle {
             left: CARD_PADDING,
         })
         .child(card_content)
+}
+
+fn power_profile_switcher(theme: &Theme, active_profile: &str) -> Row {
+    let btn_w = (CARD_INNER_WIDTH - 8.0) / 3.0;
+
+    let p_saver = profile_button(
+        theme,
+        "power-saver",
+        "Power Saver",
+        "󰌪",
+        active_profile == "power-saver",
+        btn_w,
+    );
+
+    let p_balanced = profile_button(
+        theme,
+        "balanced",
+        "Balanced",
+        "󰾅",
+        active_profile == "balanced",
+        btn_w,
+    );
+
+    let p_perf = profile_button(
+        theme,
+        "performance",
+        "Performance",
+        "󰓅",
+        active_profile == "performance",
+        btn_w,
+    );
+
+    Row::new(children![p_saver, p_balanced, p_perf])
+        .width(CARD_INNER_WIDTH)
+        .gap(4.0)
+        .align(Center)
+}
+
+fn profile_button(
+    theme: &Theme,
+    profile_id: &'static str,
+    label: &str,
+    icon: &str,
+    is_active: bool,
+    width: f32,
+) -> Rectangle {
+    let (fill, icon_color, text_color, weight) = if is_active {
+        (theme.selected_surface, theme.accent, theme.text, Weight::SemiBold)
+    } else {
+        (amane::Color::TRANSPARENT, theme.secondary_text, theme.secondary_text, Weight::Medium)
+    };
+
+    let icon_w = Text::new(icon)
+        .size(11.0)
+        .font(fonts::NERD)
+        .tight()
+        .color(icon_color);
+
+    let label_w = Text::new(label)
+        .size(10.0)
+        .font(fonts::BODY)
+        .weight(weight)
+        .color(text_color)
+        .elide();
+
+    let row = Row::new(children![icon_w, label_w])
+        .gap(4.0)
+        .align(Center);
+
+    Rectangle::new()
+        .width(width)
+        .height(24.0)
+        .radius(7.0)
+        .fill(fill)
+        .cursor(Pointer)
+        .on_click(move |_| {
+            PowerDevicesData::set_profile(profile_id);
+        })
+        .align_child(Center, Center)
+        .child(row)
 }
 
 fn peripherals_card(theme: &Theme) -> Rectangle {
@@ -558,4 +673,26 @@ fn query_power_devices() -> (bool, Option<PowerDevice>, Vec<PowerDevice>) {
 pub fn ipc(_arguments: &[String]) -> String {
     Overlay::toggle_power_devices();
     String::from("ok")
+}
+
+fn query_active_profile() -> String {
+    let Ok(output) = Command::new("busctl")
+        .args([
+            "--system",
+            "get-property",
+            "net.hadess.PowerProfiles",
+            "/net/hadess/PowerProfiles",
+            "net.hadess.PowerProfiles",
+            "ActiveProfile",
+        ])
+        .output()
+    else {
+        return String::from("balanced");
+    };
+
+    let text = String::from_utf8_lossy(&output.stdout);
+    text.split_whitespace()
+        .last()
+        .map(|s| s.trim_matches('"').to_string())
+        .unwrap_or_else(|| String::from("balanced"))
 }
