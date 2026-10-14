@@ -2,3 +2,4 @@ REWRITE.md
 target/
 Cargo.toml
 eq.toml
+__pycache__/
