@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.cjgarcia1229.monitor-layout",
+  "name": "Monitor Layout",
+  "version": "1.0.0",
+  "author": "Caleb Garcia (Ported to Amane/Suzuha)",
+  "license": "MIT",
+  "description": "Visual drag-and-drop monitor layout editor supporting Niri and Hyprland.",
+  "kinds": ["app", "plugin"],
+  "activation": "on-demand"
+}

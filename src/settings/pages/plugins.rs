@@ -38,6 +38,19 @@ pub fn build(page: &mut Page) {
         },
     );
 
+    action(
+        page,
+        "Monitor Layout",
+        "Omarchy cjgarcia1229.monitor-layout port • Drag & drop display editor with snap & scaling",
+        "Open Editor",
+        Style::Plain,
+        || {
+            let _ = std::process::Command::new("python3")
+                .arg("/home/rcrout/.config/amane/plugins/monitor-layout/monitor_layout.py")
+                .spawn();
+        },
+    );
+
     page.end_group();
 
     // Group 2: Equalizer Engine
@@ -75,6 +88,19 @@ pub fn build(page: &mut Page) {
         || {
             let _ = std::process::Command::new("xdg-open")
                 .arg("/home/rcrout/.config/amane/src")
+                .spawn();
+        },
+    );
+
+    action(
+        page,
+        "Plugin Directory",
+        "Omarchy & custom plugins located in ~/.config/amane/plugins/",
+        "Open Folder",
+        Style::Plain,
+        || {
+            let _ = std::process::Command::new("xdg-open")
+                .arg("/home/rcrout/.config/amane/plugins")
                 .spawn();
         },
     );

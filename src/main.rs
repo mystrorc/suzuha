@@ -22,6 +22,13 @@ use integrations::Export;
 use lock_screen::Logind;
 use wallpaper::{Shuffle, Wallpaper};
 
+fn ipc_monitor_layout(_arguments: &[String]) -> String {
+    let _ = std::process::Command::new("python3")
+        .arg("/home/rcrout/.config/amane/plugins/monitor-layout/monitor_layout.py")
+        .spawn();
+    String::from("ok")
+}
+
 fn main() {
     // reading it once starts the palette before the first frame
     drop(Wallpaper::read());
@@ -64,6 +71,7 @@ fn main() {
         .ipc("sysmon", overlay::sysmon::ipc)
         .ipc("power", overlay::power_devices::ipc)
         .ipc("audio_control", overlay::audio_control::ipc)
+        .ipc("monitor_layout", ipc_monitor_layout)
         .ipc("settings", settings::ipc)
         .ipc("lock", lock_screen::ipc)
         .ipc("wallpaper", wallpaper::picker::ipc)
