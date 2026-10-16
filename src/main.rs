@@ -13,6 +13,7 @@ mod recorder;
 mod profile;
 mod screen_mask;
 mod settings;
+mod shake_cursor;
 mod theme;
 mod wallpaper;
 
@@ -48,12 +49,18 @@ fn main() {
     // writes the theme out to the programs turned on under integrations
     drop(Export::read());
 
+    // starts COSMIC settings daemon bridge for iced/cosmic apps live reloading
+    integrations::cosmic::start_daemon();
+
     // pre-initialize background services for system monitor and audio control
     drop(overlay::sysmon::SysmonData::read());
     drop(overlay::audio_control::AudioDevices::read());
 
+    // shake-to-find cursor background service
+    drop(shake_cursor::ShakeCursor::read());
+
     App::new()
-        .font(fonts::BODY)
+        .font(fonts::body())
         .window_per_monitor(wallpaper::view)
         // over the wallpaper, under everything else
         .window_per_monitor(floating::view)

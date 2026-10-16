@@ -4,18 +4,18 @@ use super::super::page::Page;
 use super::super::{Confirm, Settings, Shown, switch};
 
 // the key, title, what the row says, and what turning it on does
-const INTEGRATIONS: [(&str, &str, &str, &str); 7] = [
+const INTEGRATIONS: [(&str, &str, &str, &str); 9] = [
     (
         "integration_gtk",
         "GTK",
         "GTK 3/4 and desktop preferences",
-        "This writes generated GTK themes, changes gtk-theme, icon-theme and color-scheme through dconf, replaces ~/.config/gtk-4.0/gtk.css with a symlink, and restarts xdg-desktop-portal-gnome.",
+        "This writes generated GTK themes, changes gtk-theme, icon-theme and color-scheme through gsettings, replaces ~/.config/gtk-3.0/gtk.css and ~/.config/gtk-4.0/gtk.css with symlinks, and restarts xdg-desktop-portal-gnome.",
     ),
     (
         "integration_terminal",
         "Terminals",
-        "Kitty and foot",
-        "This overwrites the kitty and foot palette files, reloads kitty windows, signals all running foot processes, and writes color escape sequences to their terminals.",
+        "Alacritty, kitty and foot",
+        "This overwrites the Alacritty, kitty and foot palette files, reloads kitty windows, signals running foot processes, and writes color escape sequences to their terminals.",
     ),
     (
         "integration_tmux",
@@ -46,6 +46,18 @@ const INTEGRATIONS: [(&str, &str, &str, &str); 7] = [
         "Cava",
         "Generated visualizer theme",
         "This creates and overwrites ~/.config/cava/themes/amane.",
+    ),
+    (
+        "integration_cosmic",
+        "COSMIC / Iced",
+        "COSMIC apps and libcosmic iced toolkit",
+        "This writes generated COSMIC themes to ~/.config/cosmic, updating cosmic-files, cosmic-edit, and all libcosmic iced applications.",
+    ),
+    (
+        "integration_zed",
+        "Zed Editor",
+        "Theme for Zed editor",
+        "This generates ~/.config/zed/themes/amane.json and updates ~/.config/zed/settings.json to use the dynamic theme.",
     ),
 ];
 

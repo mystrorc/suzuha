@@ -89,6 +89,7 @@ impl Service for Wallpaper {
             // with following turned off the colors stay those of an earlier wallpaper
             if Settings::read().flag("follow_wallpaper") {
                 Palette::write().open(&path, PALETTE_SIZE);
+                crate::integrations::export_now();
             }
 
             Self::write().path = path.clone();

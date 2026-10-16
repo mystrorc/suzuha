@@ -2,14 +2,19 @@ use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
+use std::process::Command;
 
 use amane::Service;
 
 // every setting and the value it has until changed
-const DEFAULTS: [(&str, &str); 70] = [
+const DEFAULTS: [(&str, &str); 76] = [
     // appearance
     ("blur_strength", "1"),
     ("reduce_transparency", "false"),
+    ("font_family", "Poppins"),
+    ("cursor_theme", "Adwaita"),
+    ("cursor_size", "24"),
+    ("shake_cursor", "true"),
     // colors
     ("scheme", "dynamic"),
     ("color_mode", "auto"),
@@ -86,6 +91,8 @@ const DEFAULTS: [(&str, &str); 70] = [
     ("integration_spotify", "false"),
     ("integration_btop", "false"),
     ("integration_cava", "false"),
+    ("integration_cosmic", "true"),
+    ("integration_zed", "true"),
 ];
 
 /*
@@ -223,6 +230,10 @@ impl Settings {
         settings.draft.insert(String::from(key), value);
 
         settings.save();
+        apply_appearance(&settings);
+        drop(settings);
+
+        crate::integrations::export_now();
     }
 
     pub fn apply() {
@@ -231,6 +242,10 @@ impl Settings {
         settings.values = settings.draft.clone();
 
         settings.save();
+        apply_appearance(&settings);
+        drop(settings);
+
+        crate::integrations::export_now();
     }
 
     // the draft starts over from what the shell uses
@@ -255,6 +270,37 @@ impl Settings {
         let _ = fs::create_dir_all(folder);
         let _ = fs::write(&path, text);
     }
+}
+
+fn apply_appearance(settings: &Settings) {
+    let theme = settings.text("cursor_theme");
+    let size = settings.text("cursor_size");
+    let font = settings.text("font_family");
+
+    let home = env::var("HOME").unwrap_or_default();
+    let cursor_kdl = format!("{home}/.config/niri/cursor.kdl");
+    let niri_config = format!("{home}/.config/niri/config.kdl");
+
+    let config_content = format!("cursor {{\n    xcursor-theme \"{theme}\"\n    xcursor-size {size}\n}}\n");
+    let _ = fs::write(&cursor_kdl, config_content);
+
+    if let Ok(main_config) = fs::read_to_string(&niri_config) {
+        if !main_config.contains("include \"cursor.kdl\"") {
+            let updated = format!("include \"cursor.kdl\"\n{main_config}");
+            let _ = fs::write(&niri_config, updated);
+        }
+    }
+
+    let _ = Command::new("niri").args(["msg", "action", "load-config-file"]).spawn();
+
+    let cmd = format!(
+        "gsettings set org.gnome.desktop.interface cursor-theme '{theme}'; \
+         gsettings set org.gnome.desktop.interface cursor-size {size}; \
+         gsettings set org.gnome.desktop.interface font-name '{font} 11'; \
+         mkdir -p ~/.icons/default; \
+         printf '[Icon Theme]\\nName=Default\\nComment=Default Cursor Theme\\nInherits={theme}\\n' > ~/.icons/default/index.theme"
+    );
+    let _ = Command::new("sh").arg("-c").arg(cmd).spawn();
 }
 
 // where a setting lived before it moved in here

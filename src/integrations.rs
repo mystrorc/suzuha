@@ -1,10 +1,12 @@
 mod btop;
 mod cava;
+pub mod cosmic;
 mod gtk;
 mod spotify;
 mod terminal;
 mod tmux;
 mod vesktop;
+mod zed;
 
 use std::env;
 use std::fs;
@@ -16,7 +18,7 @@ use crate::settings::Settings;
 use crate::theme::{self, Theme};
 
 // the settings key and the writer of each program that takes the shell's colors
-const PROGRAMS: [(&str, fn(&Theme)); 7] = [
+const PROGRAMS: [(&str, fn(&Theme)); 9] = [
     ("integration_gtk", gtk::export),
     ("integration_terminal", terminal::export),
     ("integration_tmux", tmux::export),
@@ -24,6 +26,8 @@ const PROGRAMS: [(&str, fn(&Theme)); 7] = [
     ("integration_spotify", spotify::export),
     ("integration_btop", btop::export),
     ("integration_cava", cava::export),
+    ("integration_cosmic", cosmic::export),
+    ("integration_zed", zed::export),
 ];
 
 /*
@@ -75,6 +79,25 @@ impl Service for Export {
         }
 
         false
+    }
+}
+
+pub fn export_now() {
+    let theme = theme::current();
+    let settings = Settings::read();
+
+    let mut turned_on = Vec::new();
+
+    for (key, export) in PROGRAMS {
+        if settings.flag(key) {
+            turned_on.push((key, export));
+        }
+    }
+
+    drop(settings);
+
+    for (_, export) in turned_on {
+        export(&theme);
     }
 }
 

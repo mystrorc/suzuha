@@ -4,7 +4,7 @@ mod dialog;
 mod field;
 mod navigation;
 mod page;
-mod pages;
+pub mod pages;
 mod row;
 mod slider;
 mod store;

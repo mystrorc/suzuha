@@ -9,7 +9,7 @@ const SWATCH_WIDTH: f32 = 28.0;
 const SWATCH_HEIGHT: f32 = 44.0;
 const SWATCH_GAP: f32 = 7.0;
 
-const SCHEMES: [(&str, &str); 34] = [
+pub const SCHEMES: [(&str, &str); 34] = [
     ("Dynamic (Wallpaper)", "dynamic"),
     ("Nord", "nord"),
     ("Dracula", "dracula"),
@@ -48,7 +48,7 @@ const SCHEMES: [(&str, &str); 34] = [
 
 const PREVIEW_HEIGHT: f32 = 116.0;
 
-const ACCENTS: [(&str, &str); 7] = [
+pub const ACCENTS: [(&str, &str); 7] = [
     ("Blue", "#89b4fa"),
     ("Rose", "#f38ba8"),
     ("Peach", "#fab387"),

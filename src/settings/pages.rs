@@ -1,8 +1,8 @@
 mod about;
-mod appearance;
+pub mod appearance;
 mod bar;
 mod behavior;
-mod colors;
+pub mod colors;
 mod floating;
 mod integrations;
 mod launcher;

@@ -16,9 +16,34 @@ const DARK_ICONS: &str = "AmaneSidebarDark";
 
 const YELLOW: Color = Color::rgb(0xf9, 0xe2, 0xaf);
 
+fn closest_gnome_accent(accent: Color) -> &'static str {
+    let hsl = crate::theme::hsl::from_color(accent);
+    if hsl.saturation < 0.15 {
+        return "slate";
+    }
+    let h = hsl.hue;
+    if h < 15.0 || h >= 345.0 {
+        "red"
+    } else if h < 45.0 {
+        "orange"
+    } else if h < 70.0 {
+        "yellow"
+    } else if h < 160.0 {
+        "green"
+    } else if h < 195.0 {
+        "teal"
+    } else if h < 260.0 {
+        "blue"
+    } else if h < 310.0 {
+        "purple"
+    } else {
+        "pink"
+    }
+}
+
 /*
  * a light and a dark gtk theme, the one in use chosen through dconf, and
- * gtk 4's own stylesheet pointed at it, since libadwaita apps ignore themes
+ * gtk 3 & 4 stylesheets pointed at it, since libadwaita apps ignore themes
  */
 pub fn export(theme: &Theme) {
     let data = std::env::var("XDG_DATA_HOME").unwrap_or_else(|_| format!("{}/.local/share", home()));
@@ -39,29 +64,31 @@ pub fn export(theme: &Theme) {
         (DARK, LIGHT, "prefer-dark", DARK_ICONS)
     };
 
-    let interface = "/org/gnome/desktop/interface";
-
     let icons_installed = Path::new(&format!("{data}/icons/{icons}")).exists();
 
     let icon_command = if icons_installed {
-        format!("dconf write {interface}/icon-theme \"'{icons}'\";")
+        format!("gsettings set org.gnome.desktop.interface icon-theme '{icons}';")
     } else {
         String::new()
     };
 
+    let gtk3 = format!("{}/gtk-3.0", config_home());
     let gtk4 = format!("{}/gtk-4.0", config_home());
+    let gnome_accent = closest_gnome_accent(theme.accent);
 
     /*
      * switching away and back makes running gtk 3 apps read the rewritten
      * css; the portal restarts last so its file dialogs pick up gtk 4's
      */
     let script = format!(
-        "dconf write {interface}/gtk-theme \"'{inactive}'\"; \
-         dconf write {interface}/gtk-theme \"'{active}'\"; \
+        "gsettings set org.gnome.desktop.interface gtk-theme '{inactive}'; \
+         gsettings set org.gnome.desktop.interface gtk-theme '{active}'; \
          {icon_command} \
-         dconf write {interface}/color-scheme \"'{scheme}'\"; \
-         sleep 0.8; mkdir -p '{gtk4}'; \
-         ln -sfn '{data}/themes/{active}/gtk-4.0/gtk.css' '{gtk4}/gtk.css' && \
+         gsettings set org.gnome.desktop.interface color-scheme '{scheme}'; \
+         gsettings set org.gnome.desktop.interface accent-color '{gnome_accent}'; \
+         mkdir -p '{gtk3}' '{gtk4}'; \
+         ln -sfn '{data}/themes/{active}/gtk-3.0/gtk.css' '{gtk3}/gtk.css'; \
+         ln -sfn '{data}/themes/{active}/gtk-4.0/gtk.css' '{gtk4}/gtk.css'; \
          sleep 0.2 && systemctl --user try-restart xdg-desktop-portal-gnome.service"
     );
 

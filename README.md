@@ -16,8 +16,25 @@ this is not a general-purpose shell. it's my own personal shell, and i'm not acc
 
 ## Fork Enhancements & Plugins (`custom` branch)
 
-This fork ([`mystrorc/suzuha`](https://github.com/mystrorc/suzuha)) tracks upstream [`MystiaFin/suzuha`](https://github.com/MystiaFin/suzuha) while adding several major features, Omarchy plugin ports, and hardware controls:
+This fork ([`mystrorc/suzuha`](https://github.com/mystrorc/suzuha)) tracks upstream [`MystiaFin/suzuha`](https://github.com/MystiaFin/suzuha) while adding several major features, Omarchy plugin ports, appearance controls, and hardware integrations:
 
+- **Quick Appearance Controls (Utility Panel):**
+  - Dedicated **Appearance (`󰏘`)** tab in the Status Bar's Utility overlay (`amane ipc call utility show appearance`).
+  - **Colors Subtab:** Mode picker (Auto / Light / Dark), Wallpaper accent toggle, 7 curated accent swatches (Blue, Rose, Peach, Green, Teal, Purple, Pink), and 34 full color schemes.
+  - **Cursor Subtab:** 4 cursor size presets (24px, 32px, 48px, 64px), Shake to Find Cursor toggle, and a picker for 10 popular cursor themes.
+  - **Fonts Subtab:** Live typography switcher supporting 10 shell font family choices.
+- **Shake to Find Cursor Service:**
+  - Background cursor velocity and directional reversal detector providing cursor locating feedback.
+- **Dynamic Theming & Desktop Integrations:**
+  - **Alacritty Terminal:** Native configuration generation writing to `~/.config/alacritty/settings-manager-colors.toml` with instant inotify live reloading.
+  - **GTK 3 & GTK 4:** Dynamic CSS symlinks (`~/.config/gtk-3.0/gtk.css` and `~/.config/gtk-4.0/gtk.css`), color-scheme preference, and matching GNOME interface accent-color.
+  - **Zed Editor:** Custom theme generation at `~/.config/zed/themes/amane.json` with dynamic syntax highlighting and UI token mapping.
+  - **COSMIC & Iced Applications:**
+    - Generates COSMIC theme builder and palette files in `~/.config/cosmic/` (supporting both v1 and v2 schemas).
+    - Features an embedded, native D-Bus `com.system76.CosmicSettingsDaemon` service bridge inside the Amane shell that provides `WatchConfig`/`WatchState` and broadcasts `Changed` signals, allowing running Iced/COSMIC apps (`cosmic-files`, `cosmic-edit`, etc.) to reload dynamically on the fly without restarting.
+- **Screen Recorder Integration:**
+  - Native screen recording tab in the Utility Panel with desktop audio and microphone toggles.
+  - Powered by `wf-recorder` for lightweight Wayland desktop recording (~5-12% CPU / 30-50MB RAM).
 - **Monitor Layout Display Editor (`plugins/monitor-layout/`):**
   - Full graphical drag-and-drop display arrangement canvas with edge-snapping.
   - Live configuration for resolution, refresh rate, scaling, and display rotation (normal, 90°, 180°, 270°).
@@ -46,7 +63,7 @@ suzuha is my personal amane configuration: a full desktop shell in Rust rather t
 - Liquid shader that lets the bar and panels flow into each other, with rounded screen corners
 - Application launcher with a `>` command mode and a tmux project picker
 - Control center with media controls and a cava visualizer
-- Utility panel with Wi-Fi, Bluetooth, brightness, calendar, notifications, and a screen recorder
+- Utility panel with Wi-Fi, Bluetooth, brightness, calendar, notifications, screen recorder, and appearance
 - Wallpaper picker with animated transitions and shuffle
 - Wallpaper-derived dynamic color palette, plus fixed Gruvbox and Catppuccin schemes
 - Floating desktop widgets that place themselves around the wallpaper
@@ -55,7 +72,7 @@ suzuha is my personal amane configuration: a full desktop shell in Rust rather t
 - Power menu
 - logind-driven Wayland lock screen
 - Built-in settings window
-- Optional theme integrations for GTK, terminals, tmux, Vesktop, Spotify, btop, and cava
+- Optional theme integrations for GTK, terminals, Alacritty, Zed, COSMIC, tmux, Vesktop, Spotify, btop, and cava
 
 ## Installation
 
@@ -108,10 +125,10 @@ These are only needed for their corresponding features:
 | `pw-play` / PipeWire | Pomodoro sounds |
 | `libnotify` (`notify-send`) | Pomodoro notifications |
 | `kitty` remote control | Live kitty palette updates |
-| `dconf` | GTK theme switching |
+| `dconf` / `gsettings` | GTK theme and GNOME accent switching |
 | `tmux` | Project launcher and generated tmux palette |
-| `xdg-desktop-portal` | Picking a profile picture |
-| `wf-recorder` | Screen recording |
+| `xdg-desktop-portal` | Picking a profile picture and accent-color broadcast |
+| `wf-recorder` | Screen recording (~5-12% CPU / 30-50MB RAM) |
 | `pactl` | Recording desktop sound and mic together |
 
 ## IPC
@@ -128,7 +145,7 @@ Mod+Shift+W { spawn "amane" "ipc" "call" "wallpaper" "toggle"; }
 
 ```sh
 amane ipc call launcher toggle     # also show, hide, showTmux
-amane ipc call utility toggle      # also show, hide, then a page: notifications, wifi, bluetooth, record
+amane ipc call utility toggle      # also show, hide, then a page: notifications, wifi, bluetooth, record, appearance
 amane ipc call control toggle      # also show, hide
 amane ipc call wallpaper toggle    # also show, hide
 amane ipc call settings
@@ -178,7 +195,7 @@ The selected wallpaper is persisted in:
 ~/.local/state/amane/wallpaper-selection
 ```
 
-The wallpaper can also drive the shell's dynamic palette. Wallpaper transitions, shuffle, light/dark mode, and color schemes are configurable from the settings window.
+The wallpaper can also drive the shell's dynamic palette. Wallpaper transitions, shuffle, light/dark mode, and color schemes are configurable from the settings window or the Utility Panel's Appearance tab.
 
 ## Lock screen
 
@@ -237,7 +254,10 @@ External theme integrations are **opt-in**. Enabling one may generate configurat
 
 Supported integrations currently include:
 
-- GTK 3 / GTK 4
+- GTK 3 / GTK 4 (with GNOME accent-color)
+- Alacritty (`settings-manager-colors.toml`)
+- Zed Editor (`themes/amane.json`)
+- COSMIC / Iced Applications (with built-in D-Bus daemon for live reloads)
 - kitty
 - foot
 - tmux
@@ -252,6 +272,11 @@ Supported integrations currently include:
 Depending on which integrations are enabled, suzuha may write files like:
 
 ```text
+~/.config/alacritty/settings-manager-colors.toml
+~/.config/zed/themes/amane.json
+~/.config/cosmic/com.system76.CosmicTheme.Mode/v1/is_dark
+~/.config/cosmic/com.system76.CosmicTheme.Dark/v2/accent
+~/.config/cosmic/com.system76.CosmicTheme.Light/v2/accent
 ~/.local/state/amane/terminal-colors-kitty.conf
 ~/.local/state/amane/terminal-colors-foot.ini
 ~/.local/state/amane/tmux-colors.conf
@@ -260,7 +285,9 @@ Depending on which integrations are enabled, suzuha may write files like:
 ~/.cache/amane/theme/spotify.css
 ```
 
-GTK integration also generates light and dark wallpaper-derived themes under `~/.local/share/themes/` and updates the active color-scheme preference through `dconf`.
+GTK integration also dynamically symlinks `~/.config/gtk-3.0/gtk.css` and `~/.config/gtk-4.0/gtk.css`, and updates the active color-scheme and GNOME interface accent-color.
+
+For COSMIC / Iced applications, Amane exports a native `com.system76.CosmicSettingsDaemon` D-Bus bridge that broadcasts theme change events directly to running apps for live on-the-fly reloads.
 
 For tmux, add this to `~/.tmux.conf` so new sessions load the generated palette:
 

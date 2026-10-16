@@ -48,6 +48,8 @@ pub struct Overlay {
 
     pub page: Page,
 
+    pub appearance_tab: usize,
+
     // the control under the pointer in the utility center, like "tab:wifi"
     pub hovered: Option<String>,
 
@@ -101,6 +103,7 @@ impl Service for Overlay {
             sessions: Vec::new(),
             utility: Panel::new(),
             page: Page::Notifications,
+            appearance_tab: 0,
             hovered: None,
             password_for: None,
             show_password: false,
