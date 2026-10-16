@@ -14,6 +14,24 @@ this is not a general-purpose shell. it's my own personal shell, and i'm not acc
   </p>
 </div>
 
+## Fork Enhancements & Plugins (`custom` branch)
+
+This fork ([`mystrorc/suzuha`](https://github.com/mystrorc/suzuha)) tracks upstream [`MystiaFin/suzuha`](https://github.com/MystiaFin/suzuha) while adding several major features, Omarchy plugin ports, and hardware controls:
+
+- **Monitor Layout Display Editor (`plugins/monitor-layout/`):**
+  - Full graphical drag-and-drop display arrangement canvas with edge-snapping.
+  - Live configuration for resolution, refresh rate, scaling, and display rotation (normal, 90°, 180°, 270°).
+  - Accessible via **Settings → Plugins → Monitor Layout** or IPC (`amane ipc call monitor_layout`).
+- **Power Profile Management:**
+  - Interactive profile switcher (Power Saver, Balanced, Performance) integrated directly into the laptop battery card.
+  - Controls system power states in real time through `tuned` or `power-profiles-daemon`.
+- **Omarchy Plugin Overlays & Tools:**
+  - **System Monitor (`src/overlay/sysmon/`):** Real-time monitoring overlay for CPU, memory, and process statistics (`amane ipc call sysmon`).
+  - **Audio & 10-Band Parametric Equalizer (`src/overlay/audio_control/`):** Dedicated PipeWire audio control panel with a 10-band graphical equalizer (`amane ipc call audio_control`).
+  - **Power Devices Monitor (`src/overlay/power_devices/`):** Per-device battery statistics for laptop battery and connected wireless peripherals (`amane ipc call power`).
+- **Settings Manager Plugins Page:**
+  - Direct UI launcher for plugins and quick shortcut to open the `~/.config/amane/plugins` folder.
+
 ## Preview
 
 https://github.com/user-attachments/assets/019e85b0-a3cb-4189-8a25-d7fd998534ea
@@ -44,7 +62,7 @@ suzuha is my personal amane configuration: a full desktop shell in Rust rather t
 Clone the repository as your amane config:
 
 ```sh
-git clone https://github.com/MystiaFin/suzuha.git ~/.config/amane
+git clone https://github.com/mystrorc/suzuha.git ~/.config/amane
 ```
 
 Build the shell, then launch it:
@@ -114,6 +132,10 @@ amane ipc call utility toggle      # also show, hide, then a page: notifications
 amane ipc call control toggle      # also show, hide
 amane ipc call wallpaper toggle    # also show, hide
 amane ipc call settings
+amane ipc call monitor_layout      # open Monitor Layout editor
+amane ipc call sysmon              # toggle System Monitor overlay
+amane ipc call audio_control       # toggle Audio & Equalizer overlay
+amane ipc call power               # toggle Power Devices overlay
 amane ipc call record              # start or stop a screen recording
 amane ipc call converter
 amane ipc call lock
@@ -200,6 +222,7 @@ Current sections include:
 - Floating widgets
 - Weather
 - Integrations
+- Plugins
 - About
 
 Settings are stored in:
@@ -264,8 +287,9 @@ Using approximate city-center coordinates is enough. Weather and air quality dat
 ## Project structure
 
 ```text
+plugins/            standalone python and web plugins (e.g. monitor-layout)
 src/bar/            status bar, workspaces, pills, and the pomodoro ring
-src/overlay/        launcher, control center, utility panel, power menu
+src/overlay/        launcher, control center, utility panel, power menu, sysmon, eq
 src/floating/       floating desktop widgets and their placement
 src/wallpaper/      wallpaper, picker, transitions, and shuffle
 src/lock_screen/    lock screen and the logind listener
@@ -275,7 +299,7 @@ src/integrations/   external theme/application integrations
 src/converter/      file converter
 src/motion/         springs, glides, and shared animation helpers
 shaders/            the liquid shader
-src/main.rs         root configuration
+src/main.rs         root configuration and IPC routing
 ```
 
 ## Notes
