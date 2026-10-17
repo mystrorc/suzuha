@@ -87,26 +87,9 @@ pub fn sync_and_guard() {
     }
 
     // Safety Guard 2: Docked (External monitors present)
-    for (ext_name, _ident, ext_item) in &external_outputs {
-        let logical = ext_item.get("logical");
-        let is_off = logical.map_or(true, |l| l.is_null());
-        if is_off {
-            let _ = Command::new("niri").args(["msg", "output", ext_name, "on"]).output();
-        }
-
-        let scale = logical.and_then(|l| l.get("scale")).and_then(|s| s.as_f64()).unwrap_or(1.0);
-        if (scale - 2.0).abs() > 0.05 {
-            let _ = Command::new("niri").args(["msg", "output", ext_name, "scale", "2.0"]).output();
-        }
-    }
-
-    // Ensure internal display is also on at scale 2.0 in dual-screen mode
-    if internal_found {
-        if internal_disabled {
-            let _ = Command::new("niri").args(["msg", "output", &internal_name, "on"]).output();
-            let _ = Command::new("niri").args(["msg", "output", &internal_name, "scale", "2.0"]).output();
-        }
-    }
+    // When external monitors are present, user preferences (from settings-manager.kdl)
+    // govern scaling, modes, and whether eDP-1 is turned off.
+    // We do NOT force scale 2.0 or force eDP-1 on when docked.
 }
 
 fn run_monitor_loop() {
