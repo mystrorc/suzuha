@@ -1,3 +1,4 @@
+use amane::Service;
 use std::sync::OnceLock;
 use zbus::blocking::connection::Builder;
 use zbus::blocking::Connection;
@@ -96,8 +97,18 @@ pub fn export(theme: &Theme) {
     let is_dark_str = if theme.light { "false\n" } else { "true\n" };
     write(&format!("{cosmic_dir}/com.system76.CosmicTheme.Mode/v1/is_dark"), is_dark_str);
 
+    let reduce_transparency = crate::settings::Settings::read().flag("reduce_transparency");
+    let (bg_alpha_hex, bg_alpha_float) = if reduce_transparency {
+        ("FF", 1.0)
+    } else {
+        ("D9", 0.85) // 85% opacity for clean, lightweight translucency
+    };
+
     let hex_alpha = |c: amane::Color| format!("{}FF", hex(c));
     let hex_color_v2 = |c: amane::Color| format!("Some(\"{}FF\")\n", hex(c));
+
+    let hex_bg = |c: amane::Color| format!("{}{}", hex(c), bg_alpha_hex);
+    let hex_color_v2_bg = |c: amane::Color| format!("Some(\"{}{}\")\n", hex(c), bg_alpha_hex);
 
     let ron_color_v1 = |c: amane::Color| {
         let r = f32::from(c.red()) / 255.0;
@@ -109,6 +120,16 @@ pub fn export(theme: &Theme) {
         )
     };
 
+    let ron_color_v1_bg = |c: amane::Color| {
+        let r = f32::from(c.red()) / 255.0;
+        let g = f32::from(c.green()) / 255.0;
+        let b = f32::from(c.blue()) / 255.0;
+        format!(
+            "Some((\n    red: {:.7},\n    green: {:.7},\n    blue: {:.7},\n    alpha: {:.2},\n))\n",
+            r, g, b, bg_alpha_float
+        )
+    };
+
     for mode in ["Dark", "Light"] {
         let active_theme = theme::for_mode(Some(mode == "Light"));
 
@@ -116,7 +137,7 @@ pub fn export(theme: &Theme) {
         let builder_v2 = format!("{cosmic_dir}/com.system76.CosmicTheme.{mode}.Builder/v2");
 
         write(&format!("{builder_v1}/accent"), &ron_color_v1(active_theme.accent));
-        write(&format!("{builder_v1}/bg_color"), &ron_color_v1(active_theme.background));
+        write(&format!("{builder_v1}/bg_color"), &ron_color_v1_bg(active_theme.background));
         write(&format!("{builder_v1}/destructive"), &ron_color_v1(active_theme.danger));
         write(&format!("{builder_v1}/neutral_tint"), &ron_color_v1(active_theme.surface));
         write(&format!("{builder_v1}/success"), &ron_color_v1(active_theme.success));
@@ -124,7 +145,7 @@ pub fn export(theme: &Theme) {
         write(&format!("{builder_v1}/warning"), &ron_color_v1(active_theme.accent_hover));
 
         write(&format!("{builder_v2}/accent"), &hex_color_v2(active_theme.accent));
-        write(&format!("{builder_v2}/bg_color"), &hex_color_v2(active_theme.background));
+        write(&format!("{builder_v2}/bg_color"), &hex_color_v2_bg(active_theme.background));
         write(&format!("{builder_v2}/destructive"), &hex_color_v2(active_theme.danger));
         write(&format!("{builder_v2}/neutral_tint"), &hex_color_v2(active_theme.surface));
         write(&format!("{builder_v2}/success"), &hex_color_v2(active_theme.success));
@@ -132,9 +153,9 @@ pub fn export(theme: &Theme) {
         write(&format!("{builder_v2}/warning"), &hex_color_v2(active_theme.accent_hover));
 
         let accent_str = hex_alpha(active_theme.accent);
-        let bg_str = hex_alpha(active_theme.background);
+        let bg_str = hex_bg(active_theme.background);
         let text_str = hex_alpha(active_theme.text);
-        let surf_str = hex_alpha(active_theme.surface);
+        let surf_str = hex_bg(active_theme.surface);
         let border_str = hex_alpha(active_theme.border);
 
         let accent_block = format!(
