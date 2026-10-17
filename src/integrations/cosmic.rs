@@ -130,6 +130,9 @@ pub fn export(theme: &Theme) {
         )
     };
 
+    let frosted_str = if reduce_transparency { "false\n" } else { "true\n" };
+    let blur_str = if reduce_transparency { "None\n" } else { "Medium\n" };
+
     for mode in ["Dark", "Light"] {
         let active_theme = theme::for_mode(Some(mode == "Light"));
 
@@ -143,6 +146,8 @@ pub fn export(theme: &Theme) {
         write(&format!("{builder_v1}/success"), &ron_color_v1(active_theme.success));
         write(&format!("{builder_v1}/text_tint"), &ron_color_v1(active_theme.text));
         write(&format!("{builder_v1}/warning"), &ron_color_v1(active_theme.accent_hover));
+        write(&format!("{builder_v1}/frosted_windows"), frosted_str);
+        write(&format!("{builder_v1}/frosted"), blur_str);
 
         write(&format!("{builder_v2}/accent"), &hex_color_v2(active_theme.accent));
         write(&format!("{builder_v2}/bg_color"), &hex_color_v2_bg(active_theme.background));
@@ -151,12 +156,20 @@ pub fn export(theme: &Theme) {
         write(&format!("{builder_v2}/success"), &hex_color_v2(active_theme.success));
         write(&format!("{builder_v2}/text_tint"), &hex_color_v2(active_theme.text));
         write(&format!("{builder_v2}/warning"), &hex_color_v2(active_theme.accent_hover));
+        write(&format!("{builder_v2}/frosted_windows"), frosted_str);
+        write(&format!("{builder_v2}/frosted"), blur_str);
 
         let accent_str = hex_alpha(active_theme.accent);
         let bg_str = hex_bg(active_theme.background);
         let text_str = hex_alpha(active_theme.text);
         let surf_str = hex_bg(active_theme.surface);
         let border_str = hex_alpha(active_theme.border);
+
+        let surf_tint_str = if reduce_transparency {
+            surf_str.clone()
+        } else {
+            format!("{}30", hex(active_theme.surface))
+        };
 
         let accent_block = format!(
             "(\n\
@@ -198,10 +211,36 @@ pub fn export(theme: &Theme) {
              )\n"
         );
 
+        let transparent_bg_block = format!(
+            "Container(\n\
+             base: \"{bg_str}\",\n\
+             component: (\n\
+                 base: \"{surf_tint_str}\",\n\
+                 hover: \"{border_str}\",\n\
+                 pressed: \"{accent_str}\",\n\
+                 selected: \"{border_str}\",\n\
+                 selected_text: \"{accent_str}\",\n\
+                 focus: \"{accent_str}\",\n\
+                 divider: \"{border_str}\",\n\
+                 on: \"{text_str}\",\n\
+                 disabled: \"{surf_tint_str}\",\n\
+                 on_disabled: \"{text_str}\",\n\
+                 border: \"{border_str}\",\n\
+                 disabled_border: \"{border_str}\",\n\
+             ),\n\
+             divider: \"{border_str}\",\n\
+             on: \"{text_str}\",\n\
+             small_widget: \"#3B3B3B40\",\n\
+             )\n"
+        );
+
         for ver in ["v1", "v2"] {
             let theme_dir = format!("{cosmic_dir}/com.system76.CosmicTheme.{mode}/{ver}");
             write(&format!("{theme_dir}/accent"), &accent_block);
             write(&format!("{theme_dir}/background"), &bg_block);
+            write(&format!("{theme_dir}/transparent_background"), &transparent_bg_block);
+            write(&format!("{theme_dir}/frosted_windows"), frosted_str);
+            write(&format!("{theme_dir}/frosted"), blur_str);
             write(&format!("{theme_dir}/name"), "\"Amane\"\n");
         }
     }
@@ -216,9 +255,14 @@ pub fn export(theme: &Theme) {
     for mode in ["Dark", "Light"] {
         emit_changed(&format!("com.system76.CosmicTheme.{mode}"), "accent");
         emit_changed(&format!("com.system76.CosmicTheme.{mode}"), "background");
+        emit_changed(&format!("com.system76.CosmicTheme.{mode}"), "transparent_background");
+        emit_changed(&format!("com.system76.CosmicTheme.{mode}"), "frosted_windows");
+        emit_changed(&format!("com.system76.CosmicTheme.{mode}"), "frosted");
         emit_changed(&format!("com.system76.CosmicTheme.{mode}"), "primary");
         emit_changed(&format!("com.system76.CosmicTheme.{mode}"), "name");
         emit_changed(&format!("com.system76.CosmicTheme.{mode}.Builder"), "accent");
         emit_changed(&format!("com.system76.CosmicTheme.{mode}.Builder"), "bg_color");
+        emit_changed(&format!("com.system76.CosmicTheme.{mode}.Builder"), "frosted_windows");
+        emit_changed(&format!("com.system76.CosmicTheme.{mode}.Builder"), "frosted");
     }
 }
