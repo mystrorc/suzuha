@@ -35,10 +35,16 @@ This fork ([`mystrorc/suzuha`](https://github.com/mystrorc/suzuha)) tracks upstr
 - **Screen Recorder Integration:**
   - Native screen recording tab in the Utility Panel with desktop audio and microphone toggles.
   - Powered by `wf-recorder` for lightweight Wayland desktop recording (~5-12% CPU / 30-50MB RAM).
+- **Native Monitor Manager & Safety Guard (`src/monitors.rs`):**
+  - Integrated Rust background service (`amane::Service`) that monitors Wayland/Niri output states via `event-stream` with 0 extra processes and ~0% CPU.
+  - **Undocked Safety Guard:** Automatically detects when the laptop is disconnected from a dock or boots without an external display, guaranteeing `eDP-1` is powered ON at scale `2.0` (`3200x1800@59.982`), preventing black screen lockouts.
+  - **Docked Consistency Guard:** Matches external displays by their hardware EDID identity (Make/Model/Serial) rather than transient connector names (`DP-5` vs `DP-1`), preventing USB-C/Thunderbolt dock re-indexing from resetting your scale or layout.
+  - **Clamshell Mode Support:** Integrated with Niri's `switch-events` to cleanly power off the laptop display when the lid is closed while docked, and automatically restore it when opened or undocked.
+  - **IPC Integration:** `amane ipc call monitors sync` for instant layout synchronization.
 - **Monitor Layout Display Editor (`plugins/monitor-layout/`):**
-  - Full graphical drag-and-drop display arrangement canvas with edge-snapping.
-  - Live configuration for resolution, refresh rate, scaling, and display rotation (normal, 90°, 180°, 270°).
-  - Accessible via **Settings → Plugins → Monitor Layout** or IPC (`amane ipc call monitor_layout`).
+  - Full graphical drag-and-drop display arrangement canvas with edge-snapping, resolution, refresh rate, and scaling picker.
+  - Upgraded to persist rules using persistent hardware make/model strings and protected by a safety lock preventing permanent `off` directives for the laptop display.
+  - Automatically notifies and synchronizes with Amane's Rust monitor manager upon saving.
 - **Power Profile Management:**
   - Interactive profile switcher (Power Saver, Balanced, Performance) integrated directly into the laptop battery card.
   - Controls system power states in real time through `tuned` or `power-profiles-daemon`.
@@ -148,8 +154,9 @@ amane ipc call launcher toggle     # also show, hide, showTmux
 amane ipc call utility toggle      # also show, hide, then a page: notifications, wifi, bluetooth, record, appearance
 amane ipc call control toggle      # also show, hide
 amane ipc call wallpaper toggle    # also show, hide
+amane ipc call monitors sync       # sync and verify active display states & scale
+amane ipc call monitor_layout      # launch the graphical Monitor Layout editor
 amane ipc call settings
-amane ipc call monitor_layout      # open Monitor Layout editor
 amane ipc call sysmon              # toggle System Monitor overlay
 amane ipc call audio_control       # toggle Audio & Equalizer overlay
 amane ipc call power               # toggle Power Devices overlay

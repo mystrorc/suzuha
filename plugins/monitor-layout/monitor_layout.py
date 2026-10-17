@@ -134,10 +134,16 @@ def load_monitors_niri() -> list[dict]:
             else:
                 w, h, r = 1920, 1080, 60.0
 
-        make_model = f"{item.get('make', '')} {item.get('model', '')}".strip()
+        make = item.get('make', '') or ''
+        model = item.get('model', '') or ''
+        serial = item.get('serial', '') or ''
+        ident_parts = [make, model, serial]
+        ident = " ".join(p for p in ident_parts if p).strip()
+
         monitors.append({
             "name": name,
-            "description": make_model or name,
+            "ident": ident or name,
+            "description": f"{make} {model}".strip() or name,
             "width": w,
             "height": h,
             "refreshRate": r,
@@ -243,13 +249,18 @@ def monitor_rule_hypr(monitor: dict) -> str:
 
 
 def monitor_rule_niri(monitor: dict) -> str:
-    if monitor.get("disabled"):
-        return f'output "{monitor["name"]}" {{\n    off\n}}'
+    name = monitor["name"]
+    is_internal = name.startswith("eDP")
+    target_name = name if is_internal else (monitor.get("ident") or name)
+
+    # Safety Guard: Never write a static `off` rule for the internal display
+    if monitor.get("disabled") and not is_internal:
+        return f'output "{target_name}" {{\n    off\n}}'
     
     trans_map = {0: "normal", 1: "90", 2: "180", 3: "270"}
     trans = trans_map.get(monitor.get("transform", 0), "normal")
     return (
-        f'output "{monitor["name"]}" {{\n'
+        f'output "{target_name}" {{\n'
         f'    mode "{monitor["width"]}x{monitor["height"]}@{monitor["refreshRate"]:.3f}"\n'
         f'    position x={monitor["x"]} y={monitor["y"]}\n'
         f'    scale {monitor["scale"]:.2f}\n'
@@ -699,7 +710,8 @@ class MonitorLayoutWindow(Gtk.ApplicationWindow):
                 temp.write_text(new_content)
                 temp.replace(NIRI_CONFIG)
                 self.preview(_button)
-                self.status.set_label(f"Layout saved to {NIRI_CONFIG.name} and applied!")
+                run("amane", "ipc", "call", "monitors", "sync", check=False)
+                self.status.set_label(f"Layout saved to {NIRI_CONFIG.name} and synced with Amane!")
             else:
                 HYPR_CONFIG.parent.mkdir(parents=True, exist_ok=True)
                 if HYPR_CONFIG.exists():

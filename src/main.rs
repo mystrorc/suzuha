@@ -6,6 +6,7 @@ mod fonts;
 mod integrations;
 mod liquid;
 mod lock_screen;
+mod monitors;
 mod motion;
 mod overlay;
 mod pomodoro;
@@ -59,6 +60,9 @@ fn main() {
     // shake-to-find cursor background service
     drop(shake_cursor::ShakeCursor::read());
 
+    // monitor manager and safety guard
+    drop(monitors::MonitorManager::read());
+
     App::new()
         .font(fonts::body())
         .window_per_monitor(wallpaper::view)
@@ -79,6 +83,7 @@ fn main() {
         .ipc("power", overlay::power_devices::ipc)
         .ipc("audio_control", overlay::audio_control::ipc)
         .ipc("monitor_layout", ipc_monitor_layout)
+        .ipc("monitors", monitors::ipc)
         .ipc("settings", settings::ipc)
         .ipc("lock", lock_screen::ipc)
         .ipc("wallpaper", wallpaper::picker::ipc)
