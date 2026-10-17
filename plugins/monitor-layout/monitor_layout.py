@@ -253,10 +253,9 @@ def monitor_rule_niri(monitor: dict) -> str:
     is_internal = name.startswith("eDP")
     target_name = name if is_internal else (monitor.get("ident") or name)
 
-    # Safety Guard: Never write a static `off` rule for the internal display
-    if monitor.get("disabled") and not is_internal:
+    if monitor.get("disabled"):
         return f'output "{target_name}" {{\n    off\n}}'
-    
+
     trans_map = {0: "normal", 1: "90", 2: "180", 3: "270"}
     trans = trans_map.get(monitor.get("transform", 0), "normal")
     return (
@@ -267,8 +266,6 @@ def monitor_rule_niri(monitor: dict) -> str:
         f'    transform "{trans}"\n'
         f'}}'
     )
-
-
 class LayoutCanvas(Gtk.DrawingArea):
     PADDING = 34
     SNAP_PIXELS = 18
@@ -299,7 +296,9 @@ class LayoutCanvas(Gtk.DrawingArea):
         self.add_controller(drag)
 
     def bounds(self):
-        active = [m for m in self.monitors if not m.get("disabled")] or self.monitors
+        active = self.monitors
+        if not active:
+            return 0, 0, 1920, 1080
         left = min(m["x"] for m in active)
         top = min(m["y"] for m in active)
         right = max(m["x"] + logical_size(m)[0] for m in active)
@@ -638,7 +637,16 @@ class MonitorLayoutWindow(Gtk.ApplicationWindow):
         idx = dropdown.get_selected()
         if 0 <= idx < len(COMMON_SCALES):
             mon = self.monitors[self.canvas.selected]
+            old_w, _ = logical_size(mon)
             mon["scale"] = COMMON_SCALES[idx]
+            new_w, _ = logical_size(mon)
+            delta_w = new_w - old_w
+            # If other monitors were positioned to the right of this monitor, shift them so they remain adjacent
+            right_edge = mon["x"] + old_w
+            for other in self.monitors:
+                if other != mon and not other.get("disabled"):
+                    if abs(other["x"] - right_edge) < 25:
+                        other["x"] += delta_w
             self.canvas.queue_draw()
 
     def on_pos_changed(self, spin):
