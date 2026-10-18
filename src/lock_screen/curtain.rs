@@ -1,3 +1,5 @@
+use std::path::Path;
+use std::process::Command;
 use std::thread;
 use std::time::Duration;
 
@@ -39,8 +41,48 @@ impl Service for Curtain {
     fn listen() {}
 }
 
+fn process_running(name: &str) -> bool {
+    Command::new("pgrep")
+        .args(["-x", name])
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+fn uses_external_locker() -> bool {
+    Path::new("/usr/bin/hyprlock").exists()
+        || process_running("hyprlock")
+        || process_running("hypridle")
+}
+
 // blocks until the session is locked; a lock already on its way is left alone
 pub fn close() {
+    // When hyprlock/hypridle manages the Wayland session lock, do not fade out
+    // the top bar or compete for ext-session-lock-v1.
+    if uses_external_locker() {
+        open();
+
+        // If neither hypridle nor hyprlock is running, launch hyprlock directly
+        if !process_running("hypridle") && !process_running("hyprlock") {
+            let _ = Command::new("hyprlock").status();
+            open();
+            return;
+        }
+
+        // Wait briefly for hypridle to spawn hyprlock, then wait until hyprlock exits
+        for _ in 0..20 {
+            if process_running("hyprlock") {
+                break;
+            }
+            thread::sleep(Duration::from_millis(100));
+        }
+        while process_running("hyprlock") {
+            thread::sleep(Duration::from_millis(250));
+        }
+        open();
+        return;
+    }
+
     {
         let mut curtain = Curtain::write();
 
