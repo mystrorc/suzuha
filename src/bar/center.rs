@@ -100,7 +100,11 @@ fn audio(theme: &Theme) -> Rectangle {
         .on_click(|button| match button {
             Button::Left => Overlay::toggle_control_center(),
             Button::Right => {
-                if Overlay::read().control_center.shown && Overlay::read().control_tab == 1 {
+                let is_eq_open = {
+                    let o = Overlay::read();
+                    o.control_center.shown && o.center_tab == 1 && o.control_tab == 1
+                };
+                if is_eq_open {
                     Overlay::toggle_control_center();
                 } else {
                     Overlay::open_control_tab(1);

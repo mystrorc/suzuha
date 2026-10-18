@@ -7,17 +7,23 @@ mod player;
 mod visualizer;
 pub mod wave;
 
-use amane::{Audio, Center, Padding, Pointer, Rectangle, Row, Service, Text, Weight, Widget, children};
+use amane::{Audio, Center, Column, Padding, Pointer, Rectangle, Row, Service, Text, Weight, Widget, children};
 
 use crate::fonts;
 
-use super::{Overlay, PanelView, Region};
+use super::{Overlay, PanelView, Region, power_devices, sysmon};
 use crate::liquid::{self, Blob};
 use crate::theme::Theme;
 
 const MAX_WIDTH: f32 = 780.0;
-// 276 tall on screen, just enough for the media card's details, plus what hides past the top edge
-const HEIGHT: f32 = 276.0 + EDGE_OVERLAP;
+
+const TOP_BAR_HEIGHT: f32 = 36.0;
+const TOP_BAR_GAP: f32 = 12.0;
+const CARD_HEIGHT: f32 = 240.0;
+
+// 288 tall on screen (36px top-level tab bar + 12px gap + 240px content), plus what hides past the top edge
+const INNER_HEIGHT: f32 = TOP_BAR_HEIGHT + TOP_BAR_GAP + CARD_HEIGHT;
+const HEIGHT: f32 = INNER_HEIGHT + EDGE_OVERLAP + 34.0;
 const RADIUS: f32 = 30.0;
 
 /*
@@ -31,20 +37,18 @@ const EDGE_OVERLAP: f32 = 40.0;
 const HIDDEN_MARGIN: f32 = 32.0;
 
 const PADDING: Padding = Padding {
-    top: EDGE_OVERLAP + 18.0,
+    top: EDGE_OVERLAP + 16.0,
     right: 18.0,
     bottom: 18.0,
     left: 18.0,
 };
-
-const INNER_HEIGHT: f32 = HEIGHT - PADDING.top - PADDING.bottom;
 
 const GAP: f32 = 14.0;
 
 const FADERS_WIDTH: f32 = 120.0;
 const CARD_RADIUS: f32 = 20.0;
 
-const VOLUME_ICON: &str = "󰕾";
+const VOLUME_ICON: &str = "󱕾";
 const MICROPHONE_ICON: &str = "󰍬";
 
 // none while fully hidden
@@ -85,6 +89,104 @@ pub fn view(overlay: &Overlay, theme: &Theme, screen: Region) -> Option<PanelVie
     Some(PanelView { blob, input, reach })
 }
 
+// Higher-level tabs at the top of the middle pulldown: System Monitor / Media / Battery
+fn section_tabs(overlay: &Overlay, theme: &Theme, width: f32) -> Row {
+    let sysmon_btn = section_tab_button(
+        theme,
+        "󰍛",
+        "System Monitor",
+        overlay.center_tab == 0,
+        || Overlay::set_center_tab(0),
+    );
+    let media_btn = section_tab_button(
+        theme,
+        "󰎆",
+        "Media",
+        overlay.center_tab == 1,
+        || Overlay::set_center_tab(1),
+    );
+    let battery_btn = section_tab_button(
+        theme,
+        "󰁹",
+        "Battery",
+        overlay.center_tab == 2,
+        || Overlay::set_center_tab(2),
+    );
+
+    let strip = Rectangle::new()
+        .width(420.0)
+        .height(TOP_BAR_HEIGHT)
+        .radius(14.0)
+        .fill(theme.surface)
+        .padding(Padding {
+            top: 4.0,
+            right: 4.0,
+            bottom: 4.0,
+            left: 4.0,
+        })
+        .align_child(Center, Center)
+        .child(
+            Row::new(children![sysmon_btn, media_btn, battery_btn])
+                .gap(6.0)
+                .align(Center),
+        );
+
+    Row::new(children![strip])
+        .width(width)
+        .height(TOP_BAR_HEIGHT)
+        .justify(Center)
+        .align(Center)
+}
+
+fn section_tab_button(
+    theme: &Theme,
+    icon: &str,
+    label: &str,
+    active: bool,
+    on_click: impl Fn() + 'static,
+) -> Rectangle {
+    let fill = if active {
+        theme.accent
+    } else {
+        amane::Color::TRANSPARENT
+    };
+    let text_color = if active {
+        theme.on_accent
+    } else {
+        theme.secondary_text
+    };
+    let icon_color = if active {
+        theme.on_accent
+    } else {
+        theme.accent
+    };
+
+    let icon_w = Text::new(icon)
+        .size(14.0)
+        .font(fonts::NERD)
+        .tight()
+        .color(icon_color);
+
+    let label_w = Text::new(label)
+        .size(12.0)
+        .font(fonts::BODY)
+        .weight(if active { Weight::SemiBold } else { Weight::Medium })
+        .color(text_color);
+
+    let row = Row::new(children![icon_w, label_w]).gap(6.0).align(Center);
+
+    Rectangle::new()
+        .width(134.0)
+        .height(28.0)
+        .radius(10.0)
+        .fill(fill)
+        .cursor(Pointer)
+        .on_click(move |_| on_click())
+        .align_child(Center, Center)
+        .child(row)
+}
+
+// Sub-tabs underneath Media: Now Playing / Audio & EQ
 pub fn tabs(overlay: &Overlay, theme: &Theme) -> Row {
     let now_playing = tab_button(
         theme,
@@ -95,7 +197,7 @@ pub fn tabs(overlay: &Overlay, theme: &Theme) -> Row {
     );
     let audio_eq = tab_button(
         theme,
-        "󰓃",
+        "󱓃",
         "Audio & EQ",
         overlay.control_tab == 1,
         || Overlay::set_control_tab(1),
@@ -157,21 +259,35 @@ fn tab_button(
 }
 
 fn content(overlay: &Overlay, theme: &Theme, width: f32) -> Rectangle {
-    let card_width = width - PADDING.left - PADDING.right - FADERS_WIDTH - GAP;
+    let inner_width = width - PADDING.left - PADDING.right;
 
-    let right_card: Box<dyn Widget> = match overlay.control_tab {
-        1 => Box::new(audio_eq::view(overlay, theme, card_width, INNER_HEIGHT)),
-        _ => Box::new(media::view(overlay, theme, card_width, INNER_HEIGHT)),
+    let top_tabs = section_tabs(overlay, theme, inner_width);
+
+    let body: Box<dyn Widget> = match overlay.center_tab {
+        0 => Box::new(sysmon::embedded_view(theme, inner_width, CARD_HEIGHT)),
+        2 => Box::new(power_devices::embedded_view(theme, inner_width, CARD_HEIGHT)),
+        _ => {
+            let card_width = inner_width - FADERS_WIDTH - GAP;
+
+            let right_card: Box<dyn Widget> = match overlay.control_tab {
+                1 => Box::new(audio_eq::view(overlay, theme, card_width, CARD_HEIGHT)),
+                _ => Box::new(media::view(overlay, theme, card_width, CARD_HEIGHT)),
+            };
+
+            Box::new(Row::new(vec![Box::new(faders(theme)) as Box<dyn Widget>, right_card]).gap(GAP))
+        }
     };
 
-    let row = Row::new(vec![Box::new(faders(theme)) as Box<dyn Widget>, right_card]).gap(GAP);
+    let column = Column::new(vec![Box::new(top_tabs) as Box<dyn Widget>, body])
+        .width(inner_width)
+        .gap(TOP_BAR_GAP);
 
     Rectangle::new()
         .width(width)
         .height(HEIGHT)
         .padding(PADDING)
         .on_hover(Overlay::hover_control_center)
-        .child(row)
+        .child(column)
 }
 
 fn faders(theme: &Theme) -> Rectangle {
@@ -194,14 +310,14 @@ fn faders(theme: &Theme) -> Rectangle {
     };
 
     let row = Row::new(children![
-        fader::view(volume, theme, INNER_HEIGHT - 12.0),
-        fader::view(microphone, theme, INNER_HEIGHT - 12.0),
+        fader::view(volume, theme, CARD_HEIGHT - 12.0),
+        fader::view(microphone, theme, CARD_HEIGHT - 12.0),
     ])
     .gap(4.0);
 
     Rectangle::new()
         .width(FADERS_WIDTH)
-        .height(INNER_HEIGHT)
+        .height(CARD_HEIGHT)
         .radius(CARD_RADIUS)
         .fill(theme.surface)
         .align_child(Center, Center)
@@ -212,7 +328,7 @@ fn faders(theme: &Theme) -> Rectangle {
 pub fn ipc(arguments: &[String]) -> String {
     let command = arguments.first().map(String::as_str).unwrap_or("toggle");
 
-    let shown = Overlay::read().control_center.shown;
+    let shown = Overlay::read().control_center.shown && Overlay::read().center_tab == 1;
 
     let wanted = match command {
         "show" => true,

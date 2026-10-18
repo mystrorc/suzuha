@@ -1,5 +1,5 @@
 use amane::{
-    Center, Color, Full, Media, Monitor, Parent, Pointer, Rectangle, Row, Service, Stack, Start, Text,
+    Button, Center, Color, Full, Media, Monitor, Parent, Pointer, Rectangle, Row, Service, Stack, Start, Text,
     Weight, Widget, Workspace, Workspaces, children,
 };
 
@@ -104,7 +104,10 @@ pub fn media(theme: &Theme) -> Option<Rectangle> {
     Some(
         pill::view(width, theme.surface)
             .cursor(Pointer)
-            .on_click(|_| Media::play_pause())
+            .on_click(|button| match button {
+                Button::Left => Overlay::toggle_control_center(),
+                _ => Media::play_pause(),
+            })
             .align_child(Center, Center)
             .child(Row::new(children![icon, label]).gap(7.0).align(Center)),
     )

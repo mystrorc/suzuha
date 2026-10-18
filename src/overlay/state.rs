@@ -20,6 +20,10 @@ pub struct Overlay {
 
     pub control_center: Panel,
 
+    // higher-level tab in the middle pulldown: 0 = System Monitor, 1 = Media, 2 = Battery
+    pub center_tab: usize,
+
+    // sub-tab under Media: 0 = Now Playing, 1 = Audio & EQ
     pub control_tab: usize,
 
     pub launcher: Panel,
@@ -89,6 +93,7 @@ impl Service for Overlay {
             action_fills,
             bar_hovered: false,
             control_center: Panel::new(),
+            center_tab: 1,
             control_tab: 0,
             launcher: Panel::new(),
             sysmon: Panel::new(),
@@ -159,12 +164,19 @@ impl Overlay {
         utility::opened(&mut overlay);
     }
 
+    pub fn set_center_tab(tab: usize) {
+        Self::write().center_tab = tab;
+    }
+
     pub fn set_control_tab(tab: usize) {
-        Self::write().control_tab = tab;
+        let mut overlay = Self::write();
+        overlay.center_tab = 1;
+        overlay.control_tab = tab;
     }
 
     pub fn open_control_tab(tab: usize) {
         let mut overlay = Self::write();
+        overlay.center_tab = 1;
         overlay.control_tab = tab;
         overlay.launcher.hide();
         overlay.power_menu.hide();
@@ -175,7 +187,7 @@ impl Overlay {
         overlay.control_center.show();
     }
 
-    pub fn toggle_control_center() {
+    pub fn toggle_center_section(section: usize) {
         let mut overlay = Self::write();
 
         overlay.launcher.hide();
@@ -184,43 +196,30 @@ impl Overlay {
         overlay.power_devices.hide();
         overlay.audio_control.hide();
         utility::close(&mut overlay);
-        overlay.control_center.toggle();
+
+        if overlay.control_center.shown && overlay.center_tab == section {
+            overlay.control_center.hide();
+        } else {
+            overlay.center_tab = section;
+            overlay.control_center.show();
+        }
+    }
+
+    pub fn toggle_control_center() {
+        Self::toggle_center_section(1);
     }
 
     pub fn toggle_sysmon() {
-        let mut overlay = Self::write();
-
-        overlay.launcher.hide();
-        overlay.power_menu.hide();
-        overlay.control_center.hide();
-        overlay.power_devices.hide();
-        overlay.audio_control.hide();
-        utility::close(&mut overlay);
-        overlay.sysmon.toggle();
+        Self::toggle_center_section(0);
     }
 
     pub fn toggle_power_devices() {
-        let mut overlay = Self::write();
-
-        overlay.launcher.hide();
-        overlay.power_menu.hide();
-        overlay.control_center.hide();
-        overlay.sysmon.hide();
-        overlay.audio_control.hide();
-        utility::close(&mut overlay);
-        overlay.power_devices.toggle();
+        Self::toggle_center_section(2);
     }
 
+    #[allow(dead_code)]
     pub fn hover_power_devices(inside: bool) {
-        let mut overlay = Self::write();
-
-        overlay.power_devices.hovered = inside;
-
-        if inside {
-            overlay.power_devices.was_hovered = true;
-        }
-
-        overlay.dismiss_if_left();
+        Self::hover_control_center(inside);
     }
 
     #[allow(dead_code)]
@@ -236,16 +235,9 @@ impl Overlay {
         overlay.audio_control.toggle();
     }
 
+    #[allow(dead_code)]
     pub fn hover_sysmon(inside: bool) {
-        let mut overlay = Self::write();
-
-        overlay.sysmon.hovered = inside;
-
-        if inside {
-            overlay.sysmon.was_hovered = true;
-        }
-
-        overlay.dismiss_if_left();
+        Self::hover_control_center(inside);
     }
 
     pub fn hover_audio_control(inside: bool) {

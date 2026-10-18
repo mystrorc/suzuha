@@ -53,8 +53,9 @@ fn main() {
     // starts COSMIC settings daemon bridge for iced/cosmic apps live reloading
     integrations::cosmic::start_daemon();
 
-    // pre-initialize background services for system monitor and audio control
+    // pre-initialize background services for system monitor, power devices, and audio control
     drop(overlay::sysmon::SysmonData::read());
+    drop(overlay::power_devices::PowerDevicesData::read());
     drop(overlay::audio_control::AudioDevices::read());
 
     // shake-to-find cursor background service

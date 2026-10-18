@@ -9,27 +9,10 @@ use amane::{
 use super::{Overlay, PanelView, Region};
 use crate::floating::sensors::Sensors;
 use crate::fonts;
-use crate::liquid::{self, Blob};
 use crate::theme::Theme;
 
-const WIDTH: f32 = 360.0;
-const HEIGHT: f32 = 450.0;
-const RADIUS: f32 = 28.0;
-
-const EDGE_OVERLAP: f32 = 40.0;
-const HIDDEN_MARGIN: f32 = 32.0;
-
-const PADDING: Padding = Padding {
-    top: EDGE_OVERLAP + 16.0,
-    right: 18.0,
-    bottom: 18.0,
-    left: 18.0,
-};
-
-const INNER_WIDTH: f32 = WIDTH - PADDING.left - PADDING.right;
-const GAP: f32 = 12.0;
-const CARD_PADDING: f32 = 14.0;
-const CARD_INNER_WIDTH: f32 = INNER_WIDTH - CARD_PADDING * 2.0;
+const CARD_PADDING: f32 = 16.0;
+const CARD_RADIUS: f32 = 20.0;
 
 #[derive(Clone, Default)]
 pub struct ProcessInfo {
@@ -68,110 +51,44 @@ impl Service for SysmonData {
         self.load5 = l5;
         self.load15 = l15;
 
-        self.top_procs = read_top_processes(4);
+        self.top_procs = read_top_processes(5);
         true
     }
 }
 
-pub fn view(overlay: &Overlay, theme: &Theme, screen: Region) -> Option<PanelView> {
-    let progress = overlay.sysmon.progress.value();
-
-    if progress <= 0.001 {
-        return None;
-    }
-
-    let width = WIDTH.min(screen.width - 24.0);
-    let x = (screen.width - width - 18.0).max(10.0);
-
-    let hidden = -(HEIGHT + HIDDEN_MARGIN);
-    let y = -EDGE_OVERLAP + hidden * (1.0 - progress);
-
-    let blob = Blob::new(x, y, width, HEIGHT)
-        .radius(RADIUS)
-        .child(content(theme, width));
-
-    let input = Region {
-        x,
-        y,
-        width,
-        height: HEIGHT,
-    };
-
-    let reach = Region {
-        x: x - liquid::CONNECTION,
-        y: 0.0,
-        width: width + liquid::CONNECTION * 2.0,
-        height: -EDGE_OVERLAP + HEIGHT + liquid::CONNECTION,
-    };
-
-    Some(PanelView { blob, input, reach })
+#[allow(dead_code)]
+pub fn view(_overlay: &Overlay, _theme: &Theme, _screen: Region) -> Option<PanelView> {
+    None
 }
 
-fn content(theme: &Theme, width: f32) -> Rectangle {
+// Two-column layout rendered inside the middle pulldown's System Monitor tab
+pub fn embedded_view(theme: &Theme, width: f32, height: f32) -> Row {
     let data = SysmonData::read();
 
-    let column = Column::new(children![
-        header(theme),
-        memory_card(theme, &data),
-        cpu_card(theme, &data),
-        processes_card(theme, &data),
+    let gap = 14.0;
+    let col_width = (width - gap) / 2.0;
+    let v_gap = 12.0;
+    let half_height = (height - v_gap) / 2.0;
+
+    let left_col = Column::new(children![
+        memory_card(theme, &data, col_width, half_height),
+        cpu_card(theme, &data, col_width, half_height),
     ])
-    .gap(GAP)
-    .width(INNER_WIDTH);
+    .gap(v_gap)
+    .width(col_width);
 
-    Rectangle::new()
+    let right_col = processes_card(theme, &data, col_width, height);
+
+    Row::new(children![left_col, right_col])
         .width(width)
-        .height(HEIGHT)
-        .padding(PADDING)
-        .on_hover(Overlay::hover_sysmon)
-        .child(column)
-}
-
-fn header(theme: &Theme) -> Row {
-    let icon = Text::new("󰍛")
-        .size(20.0)
-        .font(fonts::NERD)
-        .tight()
-        .color(theme.accent);
-
-    let title = Text::new("System Monitor")
-        .size(15.0)
-        .font(fonts::BODY)
-        .weight(Weight::SemiBold)
-        .color(theme.text);
-
-    let left = Row::new(children![icon, title]).gap(8.0).align(Center);
-
-    let term_icon = Text::new("󰆍")
-        .size(14.0)
-        .font(fonts::NERD)
-        .color(theme.secondary_text);
-
-    let term_text = Text::new("Top")
-        .size(11.0)
-        .font(fonts::BODY)
-        .weight(Weight::Medium)
-        .color(theme.secondary_text);
-
-    let term_button = Rectangle::new()
-        .width(52.0)
-        .height(24.0)
-        .radius(10.0)
-        .fill(theme.surface)
-        .align_child(Center, Center)
-        .cursor(Pointer)
-        .on_click(|_| {
-            let _ = Command::new("alacritty").arg("-e").arg("top").spawn();
-        })
-        .child(Row::new(children![term_icon, term_text]).gap(4.0).align(Center));
-
-    Row::new(children![left, term_button])
-        .width(INNER_WIDTH)
-        .justify(SpaceBetween)
+        .height(height)
+        .gap(gap)
         .align(Center)
 }
 
-fn memory_card(theme: &Theme, data: &SysmonData) -> Rectangle {
+fn memory_card(theme: &Theme, data: &SysmonData, width: f32, height: f32) -> Rectangle {
+    let inner_width = width - CARD_PADDING * 2.0;
+
     let memory = Memory::read();
     let total_gib = memory.total_kib() as f32 / 1024.0 / 1024.0;
     let used_gib = memory.used_kib() as f32 / 1024.0 / 1024.0;
@@ -186,11 +103,19 @@ fn memory_card(theme: &Theme, data: &SysmonData) -> Rectangle {
         theme.danger
     };
 
+    let icon = Text::new("󰍛")
+        .size(15.0)
+        .font(fonts::NERD)
+        .tight()
+        .color(theme.accent);
+
     let title = Text::new("Memory (RAM)")
         .size(13.0)
         .font(fonts::BODY)
         .weight(Weight::SemiBold)
         .color(theme.text);
+
+    let left_title = Row::new(children![icon, title]).gap(6.0).align(Center);
 
     let stat = Text::new(format!("{used_gib:.1} / {total_gib:.1} GiB ({percent}%)"))
         .size(12.0)
@@ -198,12 +123,12 @@ fn memory_card(theme: &Theme, data: &SysmonData) -> Rectangle {
         .weight(Weight::Medium)
         .color(theme.secondary_text);
 
-    let top_row = Row::new(children![title, stat])
-        .width(CARD_INNER_WIDTH)
+    let top_row = Row::new(children![left_title, stat])
+        .width(inner_width)
         .justify(SpaceBetween)
         .align(Center);
 
-    let bar = progress_bar(theme, usage, bar_color, CARD_INNER_WIDTH);
+    let bar = progress_bar(theme, usage, bar_color, inner_width);
 
     let swap_text = if data.swap_total_gib > 0.0 {
         format!("Swap: {:.1} / {:.1} GiB", data.swap_used_gib, data.swap_total_gib)
@@ -223,18 +148,18 @@ fn memory_card(theme: &Theme, data: &SysmonData) -> Rectangle {
         .color(theme.secondary_text);
 
     let sub_row = Row::new(children![sub_left, sub_right])
-        .width(CARD_INNER_WIDTH)
+        .width(inner_width)
         .justify(SpaceBetween)
         .align(Center);
 
     let card_content = Column::new(children![top_row, bar, sub_row])
-        .gap(8.0)
-        .width(CARD_INNER_WIDTH);
+        .gap(12.0)
+        .width(inner_width);
 
     Rectangle::new()
-        .width(INNER_WIDTH)
-        .height(84.0)
-        .radius(16.0)
+        .width(width)
+        .height(height)
+        .radius(CARD_RADIUS)
         .fill(theme.surface)
         .padding(Padding {
             top: CARD_PADDING,
@@ -245,7 +170,9 @@ fn memory_card(theme: &Theme, data: &SysmonData) -> Rectangle {
         .child(card_content)
 }
 
-fn cpu_card(theme: &Theme, data: &SysmonData) -> Rectangle {
+fn cpu_card(theme: &Theme, data: &SysmonData, width: f32, height: f32) -> Rectangle {
+    let inner_width = width - CARD_PADDING * 2.0;
+
     let cpu = Cpu::read();
     let percent = cpu.percent();
     let usage = (percent as f32 / 100.0).clamp(0.0, 1.0);
@@ -258,11 +185,19 @@ fn cpu_card(theme: &Theme, data: &SysmonData) -> Rectangle {
         theme.danger
     };
 
+    let icon = Text::new("󰻠")
+        .size(15.0)
+        .font(fonts::NERD)
+        .tight()
+        .color(theme.accent);
+
     let title = Text::new("CPU")
         .size(13.0)
         .font(fonts::BODY)
         .weight(Weight::SemiBold)
         .color(theme.text);
+
+    let left_title = Row::new(children![icon, title]).gap(6.0).align(Center);
 
     let temp_str = Sensors::read()
         .cpu
@@ -275,12 +210,12 @@ fn cpu_card(theme: &Theme, data: &SysmonData) -> Rectangle {
         .weight(Weight::Medium)
         .color(theme.secondary_text);
 
-    let top_row = Row::new(children![title, stat])
-        .width(CARD_INNER_WIDTH)
+    let top_row = Row::new(children![left_title, stat])
+        .width(inner_width)
         .justify(SpaceBetween)
         .align(Center);
 
-    let bar = progress_bar(theme, usage, bar_color, CARD_INNER_WIDTH);
+    let bar = progress_bar(theme, usage, bar_color, inner_width);
 
     let load_text = Text::new(format!("Load avg: {}  {}  {}", data.load1, data.load5, data.load15))
         .size(11.0)
@@ -288,13 +223,13 @@ fn cpu_card(theme: &Theme, data: &SysmonData) -> Rectangle {
         .color(theme.secondary_text);
 
     let card_content = Column::new(children![top_row, bar, load_text])
-        .gap(8.0)
-        .width(CARD_INNER_WIDTH);
+        .gap(12.0)
+        .width(inner_width);
 
     Rectangle::new()
-        .width(INNER_WIDTH)
-        .height(84.0)
-        .radius(16.0)
+        .width(width)
+        .height(height)
+        .radius(CARD_RADIUS)
         .fill(theme.surface)
         .padding(Padding {
             top: CARD_PADDING,
@@ -305,14 +240,44 @@ fn cpu_card(theme: &Theme, data: &SysmonData) -> Rectangle {
         .child(card_content)
 }
 
-fn processes_card(theme: &Theme, data: &SysmonData) -> Rectangle {
+fn processes_card(theme: &Theme, data: &SysmonData, width: f32, height: f32) -> Rectangle {
+    let inner_width = width - CARD_PADDING * 2.0;
+
     let title = Text::new("Top Processes (Memory)")
-        .size(12.0)
+        .size(13.0)
         .font(fonts::BODY)
         .weight(Weight::SemiBold)
+        .color(theme.text);
+
+    let term_icon = Text::new("󰆍")
+        .size(13.0)
+        .font(fonts::NERD)
         .color(theme.secondary_text);
 
-    let mut rows: Vec<Box<dyn Widget>> = vec![Box::new(title)];
+    let term_text = Text::new("Top")
+        .size(11.0)
+        .font(fonts::BODY)
+        .weight(Weight::Medium)
+        .color(theme.secondary_text);
+
+    let term_button = Rectangle::new()
+        .width(54.0)
+        .height(24.0)
+        .radius(8.0)
+        .fill(theme.selected_surface)
+        .align_child(Center, Center)
+        .cursor(Pointer)
+        .on_click(|_| {
+            let _ = Command::new("alacritty").arg("-e").arg("top").spawn();
+        })
+        .child(Row::new(children![term_icon, term_text]).gap(4.0).align(Center));
+
+    let header = Row::new(children![title, term_button])
+        .width(inner_width)
+        .justify(SpaceBetween)
+        .align(Center);
+
+    let mut rows: Vec<Box<dyn Widget>> = vec![Box::new(header)];
 
     for p in &data.top_procs {
         let name_text = Text::new(&p.name)
@@ -323,30 +288,31 @@ fn processes_card(theme: &Theme, data: &SysmonData) -> Rectangle {
             .elide();
 
         let name_box = Rectangle::new()
-            .width(CARD_INNER_WIDTH - 80.0)
-            .height(16.0)
+            .width(inner_width - 80.0)
+            .height(22.0)
             .align_child(Start, Center)
             .child(name_text);
 
         let mem_text = Text::new(format!("{:.0} MB", p.mem_mb))
             .size(11.0)
             .font(fonts::BODY)
-            .color(theme.secondary_text);
+            .weight(Weight::SemiBold)
+            .color(theme.accent);
 
         let row = Row::new(children![name_box, mem_text])
-            .width(CARD_INNER_WIDTH)
+            .width(inner_width)
             .justify(SpaceBetween)
             .align(Center);
 
         rows.push(Box::new(row));
     }
 
-    let card_content = Column::new(rows).gap(6.0).width(CARD_INNER_WIDTH);
+    let card_content = Column::new(rows).gap(10.0).width(inner_width);
 
     Rectangle::new()
-        .width(INNER_WIDTH)
-        .height(140.0)
-        .radius(16.0)
+        .width(width)
+        .height(height)
+        .radius(CARD_RADIUS)
         .fill(theme.surface)
         .padding(Padding {
             top: CARD_PADDING,
@@ -358,7 +324,7 @@ fn processes_card(theme: &Theme, data: &SysmonData) -> Rectangle {
 }
 
 fn progress_bar(theme: &Theme, amount: f32, color: Color, width: f32) -> Rectangle {
-    const BAR_HEIGHT: f32 = 6.0;
+    const BAR_HEIGHT: f32 = 8.0;
 
     let fill_width = (width * amount).max(BAR_HEIGHT);
 
