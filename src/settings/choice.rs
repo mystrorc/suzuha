@@ -44,11 +44,11 @@ pub fn add(
 
     let selector = selector(page, key, label, open);
 
-    let top = page.y;
-
     let row = row::view(theme, page.width, row::HEIGHT, title, detail, selector, WIDTH);
 
     page.row(row::HEIGHT, row);
+
+    let top = page.y - row::HEIGHT;
 
     // the menu fades out after closing, so it stays until it is gone
     let amount = motion::fade(&format!("settings-menu:{key}"), if open { 1.0 } else { 0.0 });
@@ -65,10 +65,15 @@ pub fn add(
 
     let menu = menu(page, key, options, &staged, open, menu_height, total_height);
 
-    page.menu(
-        menu.opacity(amount).scale(0.97 + 0.03 * amount).translate(x, y),
-        y + menu_height,
-    );
+    let positioned = Column::new(children![
+        Rectangle::new().width(1.0).height(y),
+        Row::new(children![
+            Rectangle::new().width(x).height(1.0),
+            menu.opacity(amount),
+        ]),
+    ]);
+
+    page.menu(positioned, y + menu_height);
 }
 
 fn selector(page: &Page, key: &'static str, label: &str, open: bool) -> Rectangle {
