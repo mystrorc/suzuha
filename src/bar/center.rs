@@ -1,6 +1,6 @@
 use amane::{
-    Audio, Button, Center, Monitor, Parent, Pointer, Rectangle, Row, Scroll, Service, Stack, Text,
-    Widget, children,
+    Audio, Button, Center, End, Monitor, Parent, Pointer, Rectangle, Row, Scroll, Service, Stack,
+    Start, Text, Widget, children,
 };
 
 use super::{pill, ring, system, timer, workspaces};
@@ -30,54 +30,115 @@ pub fn view(monitor: &Monitor, theme: &Theme, width: f32) -> Row {
     // the clock reads the settings again, so this read ends first
     drop(settings);
 
-    let mut items: Vec<Box<dyn Widget>> = Vec::new();
+    // Build the combined center pill (Volume + Time + System) locked in the exact center of the screen
+    let mut core_segments: Vec<(f32, Box<dyn Widget>)> = Vec::new();
+
+    if show_audio {
+        let (w, seg) = audio_segment(theme);
+        core_segments.push((w, Box::new(seg)));
+    }
+
+    if show_clock {
+        let (w, seg) = clock_segment(theme);
+        core_segments.push((w, Box::new(seg)));
+    }
+
+    if show_memory {
+        let (w, seg) = system::memory_segment(theme);
+        core_segments.push((w, Box::new(seg)));
+    }
+
+    let mut core_width = 0.0;
+    let mut core_items: Vec<Box<dyn Widget>> = Vec::new();
+
+    if !core_segments.is_empty() {
+        core_width += 8.0; // 4px outer padding on each end of the combined pill
+        for (idx, (seg_w, seg)) in core_segments.into_iter().enumerate() {
+            if idx > 0 {
+                core_items.push(Box::new(
+                    Rectangle::new()
+                        .width(1.0)
+                        .height(14.0)
+                        .fill(theme.border),
+                ));
+                core_width += 1.0;
+            }
+            core_items.push(seg);
+            core_width += seg_w;
+        }
+    }
+
+    // Left wing (Workspaces, Timer, Media) aligned to the right edge of the left wing (immediately left of the center pill)
+    let mut left_items: Vec<Box<dyn Widget>> = Vec::new();
 
     if show_workspaces {
-        items.push(Box::new(workspaces::workspaces_strip(
+        left_items.push(Box::new(workspaces::workspaces_strip(
             monitor,
             theme,
             &workspace_style,
         )));
     }
 
+    if let Some(timer) = timer::view(theme) {
+        left_items.push(Box::new(timer));
+    }
+
     if show_media {
         if let Some(media) = workspaces::media(theme) {
-            items.push(Box::new(media));
+            left_items.push(Box::new(media));
         }
     }
 
-    if show_audio {
-        items.push(Box::new(audio(theme)));
-    }
-
-    if let Some(timer) = timer::view(theme) {
-        items.push(Box::new(timer));
-    }
-
-    if show_clock {
-        items.push(Box::new(clock(theme)));
-    }
+    // Right wing (Battery) aligned to the left edge of the right wing (immediately right of the center pill)
+    let mut right_items: Vec<Box<dyn Widget>> = Vec::new();
 
     if show_battery {
         if let Some(battery) = system::battery(theme) {
-            items.push(Box::new(battery));
+            right_items.push(Box::new(battery));
         }
     }
 
-    if show_memory {
-        items.push(Box::new(system::memory(theme)));
-    }
+    let gap = 8.0;
+    let wing_width = ((width - core_width - gap * 2.0) / 2.0).max(0.0);
 
-    Row::new(items)
-        .width(width)
+    let left_wing = Row::new(left_items)
+        .width(wing_width)
         .height(Parent)
         .gap(8.0)
-        .justify(Center)
-        .align(Center)
+        .justify(End)
+        .align(Center);
+
+    let right_wing = Row::new(right_items)
+        .width(wing_width)
+        .height(Parent)
+        .gap(8.0)
+        .justify(Start)
+        .align(Center);
+
+    let center_locked: Box<dyn Widget> = if core_width > 0.0 {
+        Box::new(
+            pill::view(core_width, theme.surface)
+                .align_child(Center, Center)
+                .child(Row::new(core_items).height(Parent).align(Center)),
+        )
+    } else {
+        Box::new(Rectangle::new().width(0.0).height(1.0))
+    };
+
+    Row::new(vec![
+        Box::new(left_wing),
+        center_locked,
+        Box::new(right_wing),
+    ])
+    .width(width)
+    .height(Parent)
+    .gap(gap)
+    .justify(Center)
+    .align(Center)
 }
 
-// Volume pill with speaker icon inside the ring and volume percentage to the side
-fn audio(theme: &Theme) -> Rectangle {
+// Volume segment inside the locked center pill
+fn audio_segment(theme: &Theme) -> (f32, Rectangle) {
     let audio = Audio::read();
     let volume = audio.volume();
     let muted = audio.muted();
@@ -125,7 +186,9 @@ fn audio(theme: &Theme) -> Rectangle {
 
     let width = RING_SIZE + 6.0 + text_w + 16.0;
 
-    pill::view(width, theme.surface)
+    let seg = Rectangle::new()
+        .width(width)
+        .height(Parent)
         .cursor(Pointer)
         .on_scroll(scroll_volume)
         .on_click(|button| match button {
@@ -144,11 +207,13 @@ fn audio(theme: &Theme) -> Rectangle {
             _ => {}
         })
         .align_child(Center, Center)
-        .child(ind)
+        .child(ind);
+
+    (width, seg)
 }
 
-// Supports showing just time, just date, or both inside a surface pill
-fn clock(theme: &Theme) -> Rectangle {
+// Clock segment inside the locked center pill (supports time, date, or both)
+fn clock_segment(theme: &Theme) -> (f32, Rectangle) {
     let clock = Clock::read();
     let settings = Settings::read();
 
@@ -164,10 +229,20 @@ fn clock(theme: &Theme) -> Rectangle {
     drop(settings);
 
     let text_width = pill::text_width(&text, 14.0);
+    let width = text_width + 20.0;
 
-    pill::view(text_width + 24.0, theme.surface)
+    let seg = Rectangle::new()
+        .width(width)
+        .height(Parent)
+        .cursor(Pointer)
+        .on_click(|button| match button {
+            Button::Left => Overlay::toggle_control_center(),
+            _ => {}
+        })
         .align_child(Center, Center)
-        .child(pill::label(&text, 14.0, theme.text))
+        .child(pill::label(&text, 14.0, theme.text));
+
+    (width, seg)
 }
 
 fn scroll_volume(scroll: Scroll) {

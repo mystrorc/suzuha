@@ -15,7 +15,7 @@ use crate::theme::Theme;
 
 // the memory icon, and the notification, wifi and bluetooth tray icons
 const MEMORY_ICON: &str = "󰍛";
-const TRAY_ICONS: [&str; 3] = ["󰂚", "󰖩", "󰂯"];
+const TRAY_ICONS: [&str; 3] = ["󰂚", "󱚩", "󰂯"];
 
 const RING_SIZE: f32 = 24.0;
 const RING_THICKNESS: f32 = 3.0;
@@ -116,7 +116,7 @@ pub fn battery(theme: &Theme) -> Option<Rectangle> {
 // one glyph per 10%
 fn battery_icon(percent: u8, charging: bool) -> &'static str {
     if charging {
-        return "󰚥";
+        return "󱚥";
     }
 
     match percent {
@@ -133,7 +133,8 @@ fn battery_icon(percent: u8, charging: bool) -> &'static str {
     }
 }
 
-pub fn memory(theme: &Theme) -> Rectangle {
+// Segment inside the locked center pill for System (Memory)
+pub fn memory_segment(theme: &Theme) -> (f32, Rectangle) {
     let memory = Memory::read();
 
     let usage = f32::from(memory.percent()) / 100.0;
@@ -156,14 +157,18 @@ pub fn memory(theme: &Theme) -> Rectangle {
     let text_w = pill::text_width(&text, 14.0);
     let width = RING_SIZE + 6.0 + text_w + 16.0;
 
-    pill::view(width, theme.surface)
+    let seg = Rectangle::new()
+        .width(width)
+        .height(Parent)
         .cursor(Pointer)
         .on_click(|button| match button {
             Button::Left => Overlay::toggle_sysmon(),
             _ => {}
         })
         .align_child(Center, Center)
-        .child(ind)
+        .child(ind);
+
+    (width, seg)
 }
 
 // opens the utility center, and grows to the left with the time while a recording runs
