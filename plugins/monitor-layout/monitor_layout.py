@@ -227,7 +227,7 @@ def parse_modes(raw_modes: list[str]) -> list[dict]:
 
 def logical_size(monitor: dict) -> tuple[int, int]:
     width, height = monitor["width"], monitor["height"]
-    if monitor["transform"] in (1, 3, 5, 7):
+    if monitor.get("transform", 0) in (1, 3, 5, 7):
         width, height = height, width
     scale = max(0.1, monitor["scale"])
     return round(width / scale), round(height / scale)
