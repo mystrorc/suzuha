@@ -5,7 +5,7 @@ use std::process::Command;
 use std::sync::OnceLock;
 
 use amane::{
-    Center, Column, Image, Padding, Rectangle, Row, Service, SpaceBetween, Start, Text, TextInput,
+    Center, Column, End, Image, Padding, Rectangle, Row, Service, Start, Text, TextInput,
     Weight, Widget, children,
 };
 
@@ -268,11 +268,20 @@ fn hero_card(page: &Page, info: &StaticSysInfo, uptime: &str) -> Rectangle {
 }
 
 fn spec_row(theme: &Theme, width: f32, label: &str, value: &str) -> Rectangle {
+    let content_width = width - 48.0;
+    let label_width = 180.0;
+    let value_width = content_width - label_width;
+
     let label_widget = Text::new(label)
         .size(14.0)
         .font(fonts::BODY)
         .weight(Weight::Medium)
         .color(theme.text);
+
+    let label_box = Rectangle::new()
+        .width(label_width)
+        .align_child(Start, Center)
+        .child(label_widget);
 
     let value_widget = Text::new(value)
         .size(13.0)
@@ -280,11 +289,13 @@ fn spec_row(theme: &Theme, width: f32, label: &str, value: &str) -> Rectangle {
         .color(theme.secondary_text)
         .elide();
 
-    let content_width = width - 48.0;
+    let value_box = Rectangle::new()
+        .width(value_width)
+        .align_child(End, Center)
+        .child(value_widget);
 
-    let row = Row::new(children![label_widget, value_widget])
+    let row = Row::new(children![label_box, value_box])
         .width(content_width)
-        .justify(SpaceBetween)
         .align(Center);
 
     Rectangle::new()
@@ -313,13 +324,14 @@ fn profile(page: &Page) -> Rectangle {
         Text::new(profile.name())
             .size(17.0)
             .font(fonts::BODY)
-            .weight(Weight::SemiBold)
-            .color(theme.text),
-        Text::new(format!("@{login}")).size(11.0).font(fonts::BODY).color(theme.muted_text),
-        Text::new("Used by the lock screen")
-            .size(11.0)
+            .weight(Weight::Bold)
+            .color(theme.text)
+            .elide(),
+        Text::new(&login)
+            .size(12.0)
             .font(fonts::BODY)
-            .color(theme.secondary_text),
+            .color(theme.muted_text)
+            .elide(),
     ])
     .gap(2.0);
 
@@ -331,9 +343,9 @@ fn profile(page: &Page) -> Rectangle {
         buttons.push(Box::new(button::view(
             theme,
             "Default",
-            Style::Plain,
+            Style::Danger,
             true,
-            Profile::clear_picture,
+            Profile::reset_picture,
         )));
 
         buttons_width += button::width("Default") + 8.0;
@@ -344,14 +356,14 @@ fn profile(page: &Page) -> Rectangle {
         "Change photo",
         Style::Plain,
         true,
-        Profile::choose_picture,
+        Profile::pick_picture,
     )));
 
     let labels_width = page.width - 40.0 - AVATAR - 32.0 - buttons_width;
 
     let labels = Rectangle::new()
         .width(labels_width)
-        .height(AVATAR)
+        .height(44.0)
         .align_child(Start, Center)
         .child(labels);
 
@@ -375,26 +387,23 @@ fn profile(page: &Page) -> Rectangle {
 fn avatar(profile: &Profile, page: &Page) -> Rectangle {
     let theme = page.theme;
 
-    let circle = Rectangle::new()
+    let avatar = Rectangle::new()
         .width(AVATAR)
         .height(AVATAR)
-        .radius(AVATAR / 2.0)
+        .radius(24.0)
         .fill(theme.selected_surface)
         .clip();
 
     if let Some(picture) = profile.picture() {
-        if Image::loaded(picture) {
-            let pixels = AVATAR as u32 * 2;
-
-            return circle.fill(Image::cover(picture).thumbnail(pixels, pixels));
+        if Image::loaded(&picture) {
+            return avatar.fill(Image::cover(picture).thumbnail(144, 144));
         }
     }
 
-    circle.align_child(Center, Center).child(
+    avatar.align_child(Center, Center).child(
         Text::new(AVATAR_ICON)
-            .size(32.0)
+            .size(34.0)
             .font(fonts::NERD)
-            .tight()
-            .color(theme.secondary_text),
+            .color(theme.accent),
     )
 }

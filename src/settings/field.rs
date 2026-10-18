@@ -39,14 +39,12 @@ pub fn view(page: &Page, title: &str, detail: &str, input: TextInput) -> Rectang
 }
 
 // every setting that is typed, which the fields are named after
-const KEYS: [&str; 7] = [
+const KEYS: [&str; 5] = [
     "wallpaper_folder",
     "weather_place",
     "weather_latitude",
     "weather_longitude",
     "input_keyboard_layout",
-    "input_keyboard_variant",
-    "input_keyboard_options",
 ];
 
 // the fields show the draft, not what was typed before it was thrown away

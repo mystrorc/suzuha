@@ -1,3 +1,5 @@
+use amane::Service;
+
 use super::super::button::{self, Style};
 use super::super::choice;
 use super::super::field;
@@ -7,7 +9,35 @@ use super::super::slider::{self, Range};
 use super::super::switch;
 use super::super::Settings;
 
-pub const DPI_OPTIONS: [(&str, &str); 6] = [
+pub const POINTER_DEVICES: [(&str, &str); 3] = [
+    ("Logitech G Pro (Mouse)", "gpro"),
+    ("Logitech ERGO M575 (Trackball)", "m575"),
+    ("All Mice (Global Default)", "global"),
+];
+
+pub const GPRO_POLLING_RATES: [(&str, &str); 4] = [
+    ("1000 Hz (1ms)", "1ms"),
+    ("500 Hz (2ms)", "2ms"),
+    ("250 Hz (4ms)", "4ms"),
+    ("125 Hz (8ms)", "8ms"),
+];
+
+pub const M575_POLLING_RATES: [(&str, &str); 1] = [
+    ("125 Hz (8ms - Default)", "8ms"),
+];
+
+pub const GPRO_DPI_OPTIONS: [(&str, &str); 8] = [
+    ("400 DPI", "400"),
+    ("800 DPI (Default)", "800"),
+    ("1000 DPI", "1000"),
+    ("1200 DPI", "1200"),
+    ("1600 DPI", "1600"),
+    ("2000 DPI", "2000"),
+    ("2400 DPI", "2400"),
+    ("3200 DPI", "3200"),
+];
+
+pub const M575_DPI_OPTIONS: [(&str, &str); 6] = [
     ("400 DPI", "400"),
     ("800 DPI (Default)", "800"),
     ("1000 DPI", "1000"),
@@ -23,20 +53,6 @@ pub fn build(page: &mut Page) {
         "input_keyboard_layout",
         "Keyboard layout",
         "Primary XKB layout code (e.g. us, de, fr, gb)",
-    );
-
-    field::add(
-        page,
-        "input_keyboard_variant",
-        "Layout variant",
-        "Keyboard variant code (e.g. altgr-intl, dvorak)",
-    );
-
-    field::add(
-        page,
-        "input_keyboard_options",
-        "XKB options",
-        "XKB rule options (e.g. ctrl:nocaps, compose:ralt)",
     );
 
     slider::add(
@@ -91,71 +107,136 @@ pub fn build(page: &mut Page) {
 
     page.end_group();
 
-    // Mouse Settings
-    slider::add(
-        page,
-        "input_mouse_sensitivity",
-        "Pointer speed",
-        "Speed and acceleration scaling for connected mice",
-        Range {
-            min: -1.0,
-            max: 1.0,
-            step: 0.05,
-            label: slider::plain,
-        },
-    );
-
-    switch::add(
-        page,
-        "input_mouse_flat",
-        "Flat acceleration",
-        "Disable acceleration curve for consistent 1:1 motion",
-    );
-
-    switch::add(
-        page,
-        "input_mouse_left_handed",
-        "Left-handed mode",
-        "Swap primary left and right mouse buttons",
-    );
-
-    page.end_group();
-
-    // Logitech Trackball (ERGO M575) Settings
-    slider::add(
-        page,
-        "input_trackball_sensitivity",
-        "Trackball speed",
-        "Sensitivity and speed for Logitech ERGO M575 trackball",
-        Range {
-            min: -1.0,
-            max: 1.0,
-            step: 0.05,
-            label: slider::plain,
-        },
-    );
-
-    switch::add(
-        page,
-        "input_trackball_flat",
-        "Flat acceleration",
-        "Disable acceleration curve for trackball motion",
-    );
-
-    switch::add(
-        page,
-        "input_trackball_left_handed",
-        "Left-handed trackball",
-        "Swap trackball buttons for left-handed use",
-    );
-
+    // Mouse & Pointer Settings (Per-Device Configuration)
     choice::add(
         page,
-        "input_trackball_dpi",
-        "Hardware sensor DPI",
-        "Optical sensor resolution configured via Solaar",
-        &DPI_OPTIONS,
+        "input_pointer_device",
+        "Target pointing device",
+        "Select pointing device to configure its speed, polling rate, and DPI",
+        &POINTER_DEVICES,
     );
+
+    let current_dev = Settings::read().staged("input_pointer_device");
+
+    match current_dev {
+        "m575" => {
+            slider::add(
+                page,
+                "input_trackball_speed",
+                "Pointer speed",
+                "Trackball sensitivity and acceleration scaling for Logitech ERGO M575",
+                Range {
+                    min: -1.0,
+                    max: 1.0,
+                    step: 0.05,
+                    label: slider::plain,
+                },
+            );
+
+            switch::add(
+                page,
+                "input_trackball_flat",
+                "Flat acceleration",
+                "Disable acceleration curve for 1:1 trackball motion",
+            );
+
+            choice::add(
+                page,
+                "input_trackball_polling_rate",
+                "Polling rate (Report rate)",
+                "Standard report frequency for Logitech ERGO M575",
+                &M575_POLLING_RATES,
+            );
+
+            choice::add(
+                page,
+                "input_trackball_dpi",
+                "Hardware sensor DPI",
+                "Optical sensor resolution configured via Solaar",
+                &M575_DPI_OPTIONS,
+            );
+
+            switch::add(
+                page,
+                "input_trackball_left_handed",
+                "Left-handed mode",
+                "Swap trackball buttons for left-handed use",
+            );
+        }
+        "global" => {
+            slider::add(
+                page,
+                "input_mouse_sensitivity",
+                "Default pointer speed",
+                "Global speed and acceleration scaling for connected mice",
+                Range {
+                    min: -1.0,
+                    max: 1.0,
+                    step: 0.05,
+                    label: slider::plain,
+                },
+            );
+
+            switch::add(
+                page,
+                "input_mouse_flat",
+                "Flat acceleration",
+                "Disable acceleration curve globally for standard mice",
+            );
+
+            switch::add(
+                page,
+                "input_mouse_left_handed",
+                "Left-handed mode",
+                "Swap primary left and right mouse buttons globally",
+            );
+        }
+        _ => {
+            // Default: Logitech G Pro
+            slider::add(
+                page,
+                "input_gpro_speed",
+                "Pointer speed",
+                "Cursor speed and acceleration scaling for Logitech G Pro",
+                Range {
+                    min: -1.0,
+                    max: 1.0,
+                    step: 0.05,
+                    label: slider::plain,
+                },
+            );
+
+            switch::add(
+                page,
+                "input_gpro_flat",
+                "Flat acceleration",
+                "Disable acceleration curve for consistent 1:1 motion",
+            );
+
+            choice::add(
+                page,
+                "input_gpro_polling_rate",
+                "Polling rate (Report rate)",
+                "Sensor report frequency (Hz) configured via Solaar",
+                &GPRO_POLLING_RATES,
+            );
+
+            choice::add(
+                page,
+                "input_gpro_dpi",
+                "Hardware sensor DPI",
+                "Optical sensor resolution configured via Solaar",
+                &GPRO_DPI_OPTIONS,
+            );
+
+            switch::add(
+                page,
+                "input_gpro_left_handed",
+                "Left-handed mode",
+                "Swap primary left and right mouse buttons",
+            );
+        }
+    }
 
     page.end_group();
 
