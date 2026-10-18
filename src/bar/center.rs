@@ -1,15 +1,17 @@
 use amane::{
-    Audio, Button, Center, Monitor, Parent, Pointer, Rectangle, Row, Scroll, Service, Widget,
+    Audio, Button, Center, Monitor, Parent, Pointer, Rectangle, Row, Scroll, Service, Stack, Text,
+    Widget, children,
 };
 
 use super::{pill, ring, system, timer, workspaces};
 use crate::clock::Clock;
+use crate::fonts;
 use crate::overlay::Overlay;
 use crate::settings::Settings;
 use crate::theme::Theme;
 
-const RING_SIZE: f32 = 18.0;
-const RING_THICKNESS: f32 = 4.0;
+const RING_SIZE: f32 = 24.0;
+const RING_THICKNESS: f32 = 3.0;
 
 // how far one wheel step moves a level
 const STEP: i32 = 5;
@@ -74,29 +76,58 @@ pub fn view(monitor: &Monitor, theme: &Theme, width: f32) -> Row {
         .align(Center)
 }
 
-// the speaker ring only on the bar (microphone remains in pulldown tab), scroll to change level, click to open control center
+// Volume pill with speaker icon inside the ring and volume percentage to the side
 fn audio(theme: &Theme) -> Rectangle {
     let audio = Audio::read();
+    let volume = audio.volume();
+    let muted = audio.muted();
 
-    let speaker_color = if audio.muted() {
+    let speaker_color = if muted {
         theme.muted_text
     } else {
         theme.accent
     };
 
-    let speaker_value = f32::from(audio.volume()) / 100.0;
+    let text_color = if muted {
+        theme.muted_text
+    } else {
+        theme.text
+    };
 
-    let speaker = Rectangle::new()
+    let icon_glyph = if muted || volume == 0 {
+        "󰝟"
+    } else if volume < 35 {
+        "󰕿"
+    } else if volume < 70 {
+        "󰖀"
+    } else {
+        "󰕾"
+    };
+
+    let speaker_value = f32::from(volume) / 100.0;
+
+    let ring = ring::view(RING_SIZE, RING_THICKNESS, speaker_value, speaker_color, theme.border);
+
+    let icon = Rectangle::new()
         .width(RING_SIZE)
         .height(RING_SIZE)
-        .on_scroll(scroll_volume)
-        .child(ring::view(RING_SIZE, RING_THICKNESS, speaker_value, speaker_color, theme.border));
+        .align_child(Center, Center)
+        .child(Text::new(icon_glyph).size(11.0).font(fonts::MATERIAL).color(text_color));
 
-    // one ring plus 16px of padding
-    let width = RING_SIZE + 16.0;
+    let ring_with_icon = Stack::new(children![ring, icon]);
+
+    let text = format!("{volume}%");
+    let text_w = pill::text_width(&text, 14.0);
+
+    let ind = Row::new(children![ring_with_icon, pill::label(&text, 14.0, text_color)])
+        .gap(6.0)
+        .align(Center);
+
+    let width = RING_SIZE + 6.0 + text_w + 16.0;
 
     pill::view(width, theme.surface)
         .cursor(Pointer)
+        .on_scroll(scroll_volume)
         .on_click(|button| match button {
             Button::Left => Overlay::toggle_control_center(),
             Button::Right => {
@@ -113,7 +144,7 @@ fn audio(theme: &Theme) -> Rectangle {
             _ => {}
         })
         .align_child(Center, Center)
-        .child(speaker)
+        .child(ind)
 }
 
 // Supports showing just time, just date, or both inside a surface pill
