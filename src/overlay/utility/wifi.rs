@@ -1,4 +1,7 @@
 use std::cell::{Cell, RefCell};
+use std::fs;
+use std::path::Path;
+use std::process::Command;
 use std::time::{Duration, Instant};
 
 use amane::{
@@ -31,6 +34,7 @@ const FIELD_HEIGHT: f32 = 34.0;
 // the icons for signal strength, strongest first, then the rest
 const SIGNAL_ICONS: [&str; 4] = ["󰤨", "󰤥", "󰤢", "󰤟"];
 const WIFI_ICON: &str = "󰖩";
+const ETH_ICON: &str = "󰈀";
 const DISCONNECT_ICON: &str = "󰖪";
 const LOCK_ICON: &str = "󰌾";
 const CONFIRM_ICON: &str = "󰄬";
@@ -47,12 +51,119 @@ thread_local! {
      * takes a moment to turn the radio on or off
      */
     static WANTED: Cell<Option<(bool, Instant)>> = const { Cell::new(None) };
+    static ETH_WANTED: Cell<Option<(bool, Instant)>> = const { Cell::new(None) };
 
     // the password as typed so far, for the join button
     static TYPED: RefCell<String> = const { RefCell::new(String::new()) };
 }
 
+struct EthState {
+    iface: String,
+    enabled: bool,
+    connected: bool,
+}
+
+fn read_eth_state() -> Option<EthState> {
+    let entries = fs::read_dir("/sys/class/net").ok()?;
+    let mut found: Option<String> = None;
+
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().to_string();
+        if name == "lo"
+            || name.starts_with("wl")
+            || name.starts_with("docker")
+            || name.starts_with("veth")
+            || name.starts_with("br-")
+            || name.starts_with("virbr")
+            || name.starts_with("tun")
+            || name.starts_with("tap")
+        {
+            continue;
+        }
+        let path = entry.path();
+        if path.join("wireless").exists() || path.join("phy80211").exists() {
+            continue;
+        }
+        let dev_type = fs::read_to_string(path.join("type")).unwrap_or_default();
+        if dev_type.trim() == "1" {
+            found = Some(name);
+            break;
+        }
+    }
+
+    let iface = found?;
+    let base = Path::new("/sys/class/net").join(&iface);
+
+    let flags_str = fs::read_to_string(base.join("flags")).unwrap_or_default();
+    let flags = u32::from_str_radix(flags_str.trim().trim_start_matches("0x"), 16).unwrap_or(0);
+    let actual_up = (flags & 1) != 0;
+
+    let operstate = fs::read_to_string(base.join("operstate")).unwrap_or_default();
+    let carrier = fs::read_to_string(base.join("carrier")).unwrap_or_default();
+    let actual_connected = operstate.trim() == "up" || carrier.trim() == "1";
+
+    let enabled = if let Some((wanted, since)) = ETH_WANTED.get() {
+        if wanted == actual_connected || since.elapsed() > SWITCH_PATIENCE {
+            ETH_WANTED.set(None);
+            actual_connected || actual_up
+        } else {
+            wanted
+        }
+    } else {
+        actual_connected || actual_up
+    };
+
+    let connected = enabled && actual_connected;
+
+    Some(EthState {
+        iface,
+        enabled,
+        connected,
+    })
+}
+
+fn switch_eth(iface: String, enable: bool) {
+    ETH_WANTED.set(Some((enable, Instant::now())));
+    let action = if enable { "connect" } else { "disconnect" };
+    let _ = Command::new("nmcli")
+        .args(["device", action, &iface])
+        .spawn();
+    drop(Overlay::write());
+}
+
 pub fn view(overlay: &Overlay, theme: &Theme, width: f32, height: f32) -> Column {
+    let mut parts: Vec<Box<dyn Widget>> = Vec::new();
+    let mut used_height = 0.0;
+
+    if let Some(eth) = read_eth_state() {
+        let title_str = format!("Eth ({})", eth.iface);
+        let (status, status_color) = if eth.connected {
+            ("Connected", theme.success)
+        } else if eth.enabled {
+            ("Disconnected", theme.muted_text)
+        } else {
+            ("Off", theme.muted_text)
+        };
+
+        let eth_header = Header {
+            name: "ethernet",
+            icon: ETH_ICON,
+            title: &title_str,
+            status,
+            status_color,
+            active: eth.connected,
+        };
+
+        let iface_clone = eth.iface.clone();
+        let next_state = !eth.connected;
+        let eth_widget = header::view(overlay, theme, eth_header, width, move || {
+            switch_eth(iface_clone.clone(), next_state);
+        });
+
+        parts.push(Box::new(eth_widget));
+        used_height += header::HEIGHT + GAP;
+    }
+
     let network = Network::read();
 
     let enabled = wifi_enabled(&network);
@@ -76,9 +187,10 @@ pub fn view(overlay: &Overlay, theme: &Theme, width: f32, height: f32) -> Column
 
     let header = header::view(overlay, theme, header, width, move || switch_wifi(!enabled));
 
-    let list_height = height - header::HEIGHT - GAP;
+    parts.push(Box::new(header));
+    used_height += header::HEIGHT + GAP;
 
-    let mut parts: Vec<Box<dyn Widget>> = vec![Box::new(header)];
+    let list_height = (height - used_height).max(80.0);
 
     if enabled {
         parts.push(Box::new(list(overlay, theme, &network, width, list_height)));
