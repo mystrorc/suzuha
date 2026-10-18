@@ -2,6 +2,8 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
+use amane::Service;
+
 use super::super::button::{self, Style};
 use super::super::choice;
 use super::super::page::Page;

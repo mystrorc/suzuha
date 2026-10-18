@@ -17,7 +17,7 @@ use crate::profile::Profile;
 use crate::theme::Theme;
 
 const AVATAR: f32 = 72.0;
-const AVATAR_ICON: &str = "\u{db80}\u{dc04}";
+const AVATAR_ICON: &str = "󰀄";
 
 const PROFILE_HEIGHT: f32 = 128.0;
 
