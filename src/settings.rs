@@ -70,13 +70,14 @@ impl Layout {
     }
 }
 
-const SETTINGS_ICON: &str = "󰒓";
-const CLOSE_ICON: &str = "󰅖";
+const SETTINGS_ICON: &str = "\u{db81}\u{dc93}";
+const CLOSE_ICON: &str = "\u{db80}\u{udd56}";
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Page {
     User,
     Appearance,
+    Input,
     Colors,
     Launcher,
     Wallpaper,
@@ -90,64 +91,65 @@ pub enum Page {
 }
 
 // every page in the list's order, with its icon, label and the line under its title
-const PAGES: [(Page, &str, &str, &str); 12] = [
-    (Page::User, "󰀄", "User info", "Choose the name and profile picture shown on the lock screen."),
-    (Page::Appearance, "󰍹", "Appearance", "Tune the shell's surfaces and blur."),
+const PAGES: [(Page, &str, &str, &str); 13] = [
+    (Page::User, "\u{f0379}", "System info", "System specifications and user profile configuration."),
+    (Page::Appearance, "\u{f0f79}", "Appearance", "Tune the shell's surfaces, blur, and login screen."),
+    (Page::Input, "\u{f030c}", "Input", "Configure keyboard layouts, touchpad behaviors, mice, and trackball settings."),
     (
         Page::Colors,
-        "󰏘",
+        "\u{f0fd8}",
         "Colors",
         "Control palette selection and how dynamic wallpaper colors are generated.",
     ),
     (
         Page::Launcher,
-        "󰍉",
+        "\u{f0f49}",
         "Launcher",
         "Configure search results, command mode, and launcher presentation.",
     ),
     (
         Page::Wallpaper,
-        "󰸉",
+        "\u{e609}",
         "Wallpaper",
         "Choose the source directory, transitions, shuffle, and palette behavior.",
     ),
     (
         Page::Bar,
-        "󰍜",
+        "\u{f0f5c}",
         "Status bar",
         "Control placement, modules, clock formatting, and workspace presentation.",
     ),
     (
         Page::Behavior,
-        "󰒓",
+        "\u{f0493}",
         "Behavior",
         "Change dismissal rules, launcher behavior, and global motion preferences.",
     ),
     (
         Page::Floating,
-        "󰖲",
+        "\u{f0db2}",
         "Floating widgets",
         "Control desktop-only visibility, placement, scale, opacity, and cards.",
     ),
     (
         Page::Weather,
-        "󰖐",
+        "\u{f0d90}",
         "Weather",
         "Choose where the weather comes from and how it reads.",
     ),
     (
         Page::Integrations,
-        "󰌹",
+        "\u{f0f39}",
         "Integrations",
         "Keep supported applications in sync with the current shell palette.",
     ),
     (
         Page::Plugins,
-        "󰐱",
+        "\u{f0c31}",
         "Plugins",
         "Manage converted Omarchy plugins, panel flyouts, and Equalizer audio controls.",
     ),
-    (Page::About, "󰋼", "About", "Inspect the running setup or reset settings."),
+    (Page::About, "\u{f0efc}", "About", "Inspect the running setup or reset settings."),
 ];
 
 // something risky waiting for a yes before it is staged
@@ -183,8 +185,7 @@ impl Service for Shown {
     }
 
     // it only changes through input
-    fn listen() {}
-}
+    fn listen() {}\n}
 
 pub fn hover(name: String, inside: bool) {
     let mut shown = Shown::write();

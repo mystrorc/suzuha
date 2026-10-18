@@ -4,6 +4,7 @@ mod bar;
 mod behavior;
 pub mod colors;
 mod floating;
+mod input;
 mod integrations;
 mod launcher;
 mod plugins;
@@ -21,6 +22,7 @@ pub fn build(shown: Shown, page: &mut Page) {
     match shown {
         Shown::User => user::build(page),
         Shown::Appearance => appearance::build(page),
+        Shown::Input => input::build(page),
         Shown::Colors => colors::build(page),
         Shown::Launcher => launcher::build(page),
         Shown::Wallpaper => wallpaper::build(page),

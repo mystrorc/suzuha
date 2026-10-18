@@ -7,8 +7,8 @@ use crate::theme::Theme;
 
 pub const WIDTH: f32 = 218.0;
 
-const ITEM_HEIGHT: f32 = 46.0;
-const ITEM_GAP: f32 = 3.0;
+const ITEM_HEIGHT: f32 = 38.0;
+const ITEM_GAP: f32 = 2.0;
 
 const TOP: f32 = 12.0;
 const SIDE: f32 = 10.0;
@@ -37,7 +37,7 @@ pub fn view(theme: &Theme, shown: Page, height: f32) -> Rectangle {
     let selection = Rectangle::new()
         .width(item_width)
         .height(ITEM_HEIGHT)
-        .radius(12.0)
+        .radius(10.0)
         .fill(theme.selected_surface)
         .translate(SIDE, y);
 
@@ -78,10 +78,10 @@ fn item(theme: &Theme, page: Page, icon: &str, label: &str, current: bool, width
     };
 
     let icon = Rectangle::new()
-        .width(26.0)
-        .height(26.0)
+        .width(24.0)
+        .height(24.0)
         .align_child(Center, Center)
-        .child(Text::new(icon).size(16.0).font(fonts::NERD).tight().color(icon_color));
+        .child(Text::new(icon).size(15.0).font(fonts::NERD).tight().color(icon_color));
 
     let label = Text::new(label)
         .size(13.0)
@@ -93,24 +93,21 @@ fn item(theme: &Theme, page: Page, icon: &str, label: &str, current: bool, width
     Rectangle::new()
         .width(width)
         .height(ITEM_HEIGHT)
-        .radius(12.0)
+        .radius(10.0)
         .fill(fill)
         .cursor(Pointer)
         .on_hover(move |inside| hover(hover_name.clone(), inside))
         .on_click(move |_| select(page))
+        .align_child(Start, Center)
         .padding(Padding {
             top: 0.0,
-            right: 13.0,
+            right: 12.0,
             bottom: 0.0,
-            left: 13.0,
+            left: 10.0,
         })
-        .align_child(Start, Center)
-        .child(Row::new(children![icon, label]).gap(12.0).align(Center))
+        .child(Row::new(children![icon, label]).gap(10.0).align(Center))
 }
 
 fn select(page: Page) {
-    let mut shown = Shown::write();
-
-    shown.page = page;
-    shown.choice = None;
+    Shown::write().page = page;
 }

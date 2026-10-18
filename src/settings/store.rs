@@ -7,7 +7,7 @@ use std::process::Command;
 use amane::Service;
 
 // every setting and the value it has until changed
-const DEFAULTS: [(&str, &str); 76] = [
+const DEFAULTS: [(&str, &str); 92] = [
     // appearance
     ("blur_strength", "1"),
     ("reduce_transparency", "false"),
@@ -15,6 +15,27 @@ const DEFAULTS: [(&str, &str); 76] = [
     ("cursor_theme", "Adwaita"),
     ("cursor_size", "24"),
     ("shake_cursor", "true"),
+    // login screen
+    ("sddm_theme", "sugar-dark"),
+    // input - keyboard
+    ("input_keyboard_layout", "us"),
+    ("input_keyboard_variant", ""),
+    ("input_keyboard_options", ""),
+    ("input_keyboard_repeat_rate", "25"),
+    ("input_keyboard_repeat_delay", "600"),
+    // input - touchpad
+    ("input_touchpad_natural_scroll", "false"),
+    ("input_touchpad_tap_to_click", "true"),
+    ("input_touchpad_dwt", "true"),
+    // input - mouse
+    ("input_mouse_sensitivity", "0"),
+    ("input_mouse_flat", "false"),
+    ("input_mouse_left_handed", "false"),
+    // input - trackball
+    ("input_trackball_sensitivity", "0"),
+    ("input_trackball_flat", "false"),
+    ("input_trackball_left_handed", "false"),
+    ("input_trackball_dpi", "800"),
     // colors
     ("scheme", "dynamic"),
     ("color_mode", "auto"),
@@ -142,6 +163,16 @@ impl Service for Settings {
             values.insert(String::from(key), String::from(value.trim()));
         }
 
+        // read SDDM active theme from /etc/sddm.conf.d/10-theme.conf if present
+        if let Ok(c) = fs::read_to_string("/etc/sddm.conf.d/10-theme.conf") {
+            for line in c.lines() {
+                if let Some(val) = line.trim().strip_prefix("Current=") {
+                    values.insert(String::from("sddm_theme"), String::from(val.trim()));
+                    break;
+                }
+            }
+        }
+
         // keys that are no longer settings are dropped
         for line in saved.lines() {
             let Some((key, value)) = line.split_once('=') else {
@@ -231,6 +262,8 @@ impl Settings {
 
         settings.save();
         apply_appearance(&settings);
+        apply_input(&settings);
+        apply_sddm(&settings);
         drop(settings);
 
         crate::integrations::export_now();
@@ -243,6 +276,8 @@ impl Settings {
 
         settings.save();
         apply_appearance(&settings);
+        apply_input(&settings);
+        apply_sddm(&settings);
         drop(settings);
 
         crate::integrations::export_now();
@@ -301,6 +336,114 @@ fn apply_appearance(settings: &Settings) {
          printf '[Icon Theme]\\nName=Default\\nComment=Default Cursor Theme\\nInherits={theme}\\n' > ~/.icons/default/index.theme"
     );
     let _ = Command::new("sh").arg("-c").arg(cmd).spawn();
+}
+
+fn apply_sddm(settings: &Settings) {
+    let theme_id = settings.text("sddm_theme");
+    let content = format!("[Theme]\nCurrent={theme_id}\n");
+    let _ = fs::write("/etc/sddm.conf.d/10-theme.conf", content);
+}
+
+fn apply_input(settings: &Settings) {
+    let home = env::var("HOME").unwrap_or_default();
+    let kdl_path = format!("{home}/.config/niri/settings-manager.kdl");
+
+    let layout = settings.text("input_keyboard_layout");
+    let variant = settings.text("input_keyboard_variant");
+    let options = settings.text("input_keyboard_options");
+    let repeat_rate = settings.text("input_keyboard_repeat_rate");
+    let repeat_delay = settings.text("input_keyboard_repeat_delay");
+
+    let natural_scroll = settings.flag("input_touchpad_natural_scroll");
+    let tap_to_click = settings.flag("input_touchpad_tap_to_click");
+    let dwt = settings.flag("input_touchpad_dwt");
+
+    let mouse_sens: f32 = settings.text("input_mouse_sensitivity").parse().unwrap_or(0.0);
+    let mouse_flat = settings.flag("input_mouse_flat");
+    let mouse_left = settings.flag("input_mouse_left_handed");
+
+    let trackball_sens: f32 = settings.text("input_trackball_sensitivity").parse().unwrap_or(0.0);
+    let trackball_flat = settings.flag("input_trackball_flat");
+    let trackball_left = settings.flag("input_trackball_left_handed");
+    let trackball_dpi = settings.text("input_trackball_dpi");
+
+    // Generate input block
+    let mut input_block = String::from("// Input Configuration\ninput {\n");
+    input_block.push_str("    keyboard {\n        xkb {\n");
+    input_block.push_str(&format!("            layout \"{layout}\"\n"));
+    if !variant.trim().is_empty() {
+        input_block.push_str(&format!("            variant \"{variant}\"\n"));
+    }
+    if !options.trim().is_empty() {
+        input_block.push_str(&format!("            options \"{options}\"\n"));
+    }
+    input_block.push_str("        }\n");
+    input_block.push_str(&format!("        repeat-rate {repeat_rate}\n"));
+    input_block.push_str(&format!("        repeat-delay {repeat_delay}\n"));
+    input_block.push_str("    }\n");
+
+    input_block.push_str("    touchpad {\n");
+    if natural_scroll {
+        input_block.push_str("        natural-scroll\n");
+    }
+    if tap_to_click {
+        input_block.push_str("        tap\n");
+    }
+    if dwt {
+        input_block.push_str("        dwt\n");
+    }
+    input_block.push_str("    }\n");
+
+    input_block.push_str("    mouse {\n");
+    input_block.push_str(&format!("        accel-speed {:.2}\n", mouse_sens));
+    input_block.push_str(&format!("        accel-profile \"{}\"\n", if mouse_flat { "flat" } else { "adaptive" }));
+    if mouse_left {
+        input_block.push_str("        left-handed\n");
+    }
+    input_block.push_str("    }\n");
+
+    input_block.push_str("    trackball {\n");
+    input_block.push_str(&format!("        accel-speed {:.2}\n", trackball_sens));
+    input_block.push_str(&format!("        accel-profile \"{}\"\n", if trackball_flat { "flat" } else { "adaptive" }));
+    if trackball_left {
+        input_block.push_str("        left-handed\n");
+    }
+    input_block.push_str("    }\n");
+    input_block.push_str("}\n");
+
+    if let Ok(content) = fs::read_to_string(&kdl_path) {
+        if let Some(start) = content.find("input {") {
+            let mut depth = 0;
+            let mut end = None;
+            for (idx, ch) in content[start..].char_indices() {
+                if ch == '{' {
+                    depth += 1;
+                } else if ch == '}' {
+                    depth -= 1;
+                    if depth == 0 {
+                        end = Some(start + idx + 1);
+                        break;
+                    }
+                }
+            }
+            if let Some(end_idx) = end {
+                let comment_start = content[..start].rfind("// Input Configuration").unwrap_or(start);
+                let new_content = format!("{}{}{}", &content[..comment_start], input_block, &content[end_idx..]);
+                let _ = fs::write(&kdl_path, new_content);
+            }
+        } else {
+            let new_content = format!("{}\n{}", content, input_block);
+            let _ = fs::write(&kdl_path, new_content);
+        }
+    } else {
+        let _ = fs::write(&kdl_path, &input_block);
+    }
+
+    let _ = Command::new("niri").args(["msg", "action", "load-config-file"]).spawn();
+
+    if !trackball_dpi.is_empty() {
+        let _ = Command::new("solaar").args(["config", "ERGO M575", "dpi", trackball_dpi]).spawn();
+    }
 }
 
 // where a setting lived before it moved in here
