@@ -116,9 +116,9 @@ pub fn build(page: &mut Page) {
         &POINTER_DEVICES,
     );
 
-    let current_dev = Settings::read().staged("input_pointer_device");
+    let current_dev = String::from(Settings::read().staged("input_pointer_device"));
 
-    match current_dev {
+    match current_dev.as_str() {
         "m575" => {
             slider::add(
                 page,

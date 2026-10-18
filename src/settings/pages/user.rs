@@ -280,6 +280,7 @@ fn spec_row(theme: &Theme, width: f32, label: &str, value: &str) -> Rectangle {
 
     let label_box = Rectangle::new()
         .width(label_width)
+        .height(48.0)
         .align_child(Start, Center)
         .child(label_widget);
 
@@ -291,6 +292,7 @@ fn spec_row(theme: &Theme, width: f32, label: &str, value: &str) -> Rectangle {
 
     let value_box = Rectangle::new()
         .width(value_width)
+        .height(48.0)
         .align_child(End, Center)
         .child(value_widget);
 
@@ -345,7 +347,7 @@ fn profile(page: &Page) -> Rectangle {
             "Default",
             Style::Danger,
             true,
-            Profile::reset_picture,
+            Profile::clear_picture,
         )));
 
         buttons_width += button::width("Default") + 8.0;
@@ -356,7 +358,7 @@ fn profile(page: &Page) -> Rectangle {
         "Change photo",
         Style::Plain,
         true,
-        Profile::pick_picture,
+        Profile::choose_picture,
     )));
 
     let labels_width = page.width - 40.0 - AVATAR - 32.0 - buttons_width;
