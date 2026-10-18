@@ -1,17 +1,12 @@
-use amane::{Full, Layer, LayerWindow, Mask, Monitor, Parent, Rectangle, Service, Zone};
+use amane::{Color, Full, Layer, LayerWindow, Mask, Monitor, Parent, Rectangle, Zone};
 
-use crate::lock_screen::Curtain;
-use crate::theme;
 use crate::wallpaper::SCREEN_RADIUS;
 
 /*
- * the bar's color with a rounded hole the size of the area below the bar,
- * above windows, so the screen's corners look rounded like the bar flows
- * into them; it takes no clicks
+ * With an invisible top bar background, the screen mask is kept transparent
+ * so no dark corner frames appear below the bar.
  */
 pub fn view(_monitor: &Monitor) -> LayerWindow {
-    let theme = theme::current();
-
     let hole = Rectangle::new()
         .width(Parent)
         .height(Parent)
@@ -29,8 +24,7 @@ pub fn view(_monitor: &Monitor) -> LayerWindow {
             Rectangle::new()
                 .width(Parent)
                 .height(Parent)
-                .fill(theme.background)
-                .opacity(Curtain::read().items.value())
+                .fill(Color::TRANSPARENT)
                 .child(hole),
         )
 }

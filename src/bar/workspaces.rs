@@ -26,7 +26,35 @@ const STRIP_PADDING: f32 = 4.0;
 // with the row's 10px gap this keeps 20px from the screen edge
 const EDGE: f32 = 10.0;
 
-pub fn view(monitor: &Monitor, theme: &Theme, width: f32) -> Row {
+// Left section of the bar: only the Power Menu button
+pub fn view(theme: &Theme, width: f32) -> Row {
+    let logo = Rectangle::new()
+        .width(34.0)
+        .height(STRIP_HEIGHT)
+        .radius(Full)
+        .fill(theme.surface)
+        .cursor(Pointer)
+        .on_click(|_| Overlay::toggle_power_menu())
+        .align_child(Center, Center)
+        .child(Text::new(LOGO).size(22.0).font(fonts::NERD).color(theme.accent));
+
+    let settings = Settings::read();
+
+    let mut items: Vec<Box<dyn Widget>> = vec![Box::new(Rectangle::new().width(EDGE).height(1.0))];
+
+    if settings.flag("bar_logo") {
+        items.push(Box::new(logo));
+    }
+
+    Row::new(items)
+        .width(width)
+        .height(Parent)
+        .gap(10.0)
+        .justify(Start)
+        .align(Center)
+}
+
+pub fn workspaces_strip(monitor: &Monitor, theme: &Theme, style: &str) -> Rectangle {
     let workspaces = Workspaces::read();
 
     let mut own: Vec<&Workspace> = Vec::new();
@@ -40,41 +68,11 @@ pub fn view(monitor: &Monitor, theme: &Theme, width: f32) -> Row {
 
     own.sort_by_key(|workspace| workspace.index());
 
-    let logo = Rectangle::new()
-        .width(30.0)
-        .height(STRIP_HEIGHT)
-        .cursor(Pointer)
-        .on_click(|_| Overlay::toggle_power_menu())
-        .align_child(Center, Center)
-        .child(Text::new(LOGO).size(28.0).font(fonts::NERD).color(theme.accent));
-
-    let settings = Settings::read();
-
-    let mut items: Vec<Box<dyn Widget>> = vec![Box::new(Rectangle::new().width(EDGE).height(1.0))];
-
-    if settings.flag("bar_logo") {
-        items.push(Box::new(logo));
-    }
-
-    if settings.flag("bar_workspaces") {
-        items.push(Box::new(strip(monitor, &own, theme, settings.text("workspace_style"))));
-    }
-
-    // Now playing media moved to left side
-    if settings.flag("bar_media") {
-        items.push(Box::new(media(theme)));
-    }
-
-    Row::new(items)
-        .width(width)
-        .height(Parent)
-        .gap(10.0)
-        .justify(Start)
-        .align(Center)
+    strip(monitor, &own, theme, style)
 }
 
 // "artist - title", or "No media" while nothing plays
-fn media(theme: &Theme) -> Rectangle {
+pub fn media(theme: &Theme) -> Rectangle {
     let media = Media::read();
 
     let text = if media.title().is_empty() {

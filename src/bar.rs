@@ -9,7 +9,7 @@ mod timer;
 mod workspaces;
 
 use amane::{
-    Color, Full, Layer, LayerWindow, Monitor, Parent, Rectangle, Row, Service, Stack, Vertical,
+    Color, Full, Layer, LayerWindow, Monitor, Parent, Rectangle, Row, Service, Vertical,
     Zone, children,
 };
 
@@ -20,9 +20,10 @@ use crate::theme;
 
 use reveal::Reveal;
 
-const CORNER_RADIUS: f32 = 16.0;
-
 pub const ITEM_HEIGHT: f32 = 26.0;
+
+// Width reserved on the left (Power Menu) and right (System Tray) so the middle section stays centered
+const SIDE_WIDTH: f32 = 140.0;
 
 // what is left of an auto-hidden bar, for the pointer to find
 const TRIGGER: f32 = 2.0;
@@ -68,27 +69,15 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
 
     let window_height = (height * shown).max(TRIGGER);
 
-    // three equal thirds, so the middle section stays centered whatever the sides hold
-    let third = monitor.width as f32 / 3.0;
+    let total_width = monitor.width as f32;
+    let side_width = SIDE_WIDTH.min(total_width * 0.2);
+    let center_width = (total_width - side_width * 2.0).max(0.0);
 
     let sections = Row::new(children![
-        workspaces::view(monitor, &theme, third),
-        center::view(&theme, third),
-        system::view(&theme, third),
+        workspaces::view(&theme, side_width),
+        center::view(monitor, &theme, center_width),
+        system::view(&theme, side_width),
     ]);
-
-    // taller than the bar and clipped, so only the corners away from the edge come out rounded
-    let background = Rectangle::new()
-        .width(Parent)
-        .height(height + CORNER_RADIUS)
-        .radius(CORNER_RADIUS)
-        .fill(theme.background);
-
-    let background = if bottom {
-        background.translate(0.0, -CORNER_RADIUS)
-    } else {
-        background
-    };
 
     let content = Rectangle::new()
         .width(Parent)
@@ -100,10 +89,6 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
 
     let slide = if bottom { 0.0 } else { -hidden };
 
-    let bar = Stack::new(children![background, content])
-        .width(Parent)
-        .height(height);
-
     let edge = if bottom {
         Vertical::Bottom
     } else {
@@ -112,10 +97,7 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
 
     let space = if hides { Zone::Ignore } else { Zone::Reserve };
 
-    // a hiding bar leaves no black strip behind
-    let behind = if hides { Color::TRANSPARENT } else { Color::BLACK };
-
-    // black behind the rounded corners, so the screen's corners look rounded too
+    // Invisible top bar background: only the pills and icons are drawn
     LayerWindow::new()
         .width(Full)
         .height(window_height)
@@ -126,10 +108,10 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
             Rectangle::new()
                 .width(Parent)
                 .height(Parent)
-                .fill(behind)
+                .fill(Color::TRANSPARENT)
                 .opacity(Curtain::read().items.value())
                 .clip()
                 .on_hover(reveal::hover)
-                .child(Rectangle::new().width(Parent).height(height).translate(0.0, slide).child(bar)),
+                .child(Rectangle::new().width(Parent).height(height).translate(0.0, slide).child(content)),
         )
 }

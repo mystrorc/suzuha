@@ -7,11 +7,10 @@ mod state;
 use std::sync::atomic::Ordering;
 
 use amane::{
-    Color, Full, Image, Layer, LayerWindow, Monitor, Parent, Rectangle, Service, Shadow, Stack,
+    Color, Full, Image, Layer, LayerWindow, Monitor, Parent, Rectangle, Service, Stack,
     Zone, children,
 };
 
-use crate::bar;
 use crate::lock_screen::{self, Curtain};
 use crate::settings::Settings;
 use crate::theme;
@@ -25,9 +24,6 @@ const FRAME_RADIUS: f32 = 28.0;
 
 // the rounded edge of the area below the bar, the same as the screen mask's
 pub const SCREEN_RADIUS: f32 = 16.0;
-
-const SHADOW: Color = Color::rgba(0, 0, 0, 0x50);
-const SHADOW_BLUR: f32 = 8.0;
 
 // under everything, taking no clicks; niri also shows it behind the overview
 pub fn view(monitor: &Monitor) -> LayerWindow {
@@ -82,15 +78,6 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
         }
     }
 
-    // pressed into the area below the bar, so its edge reads as the screen's edge
-    let shadow = Rectangle::new()
-        .width(Parent)
-        .height(height - bar::reserved())
-        .translate(0.0, bar::reserved_top())
-        .radius(SCREEN_RADIUS)
-        .shadow(Shadow::inner(SHADOW).blur(SHADOW_BLUR))
-        .opacity(curtain.items.value());
-
     let dim = Rectangle::new()
         .width(Parent)
         .height(Parent)
@@ -104,5 +91,5 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
         .space(Zone::Ignore)
         .namespace("wallpaper")
         .click_through()
-        .child(Stack::new(children![backdrop, frame, shadow, dim]).width(Parent).height(Parent))
+        .child(Stack::new(children![backdrop, frame, dim]).width(Parent).height(Parent))
 }

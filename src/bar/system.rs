@@ -37,20 +37,11 @@ thread_local! {
     static RECORDING: RefCell<Option<(Glide, String)>> = const { RefCell::new(None) };
 }
 
+// Right section of the bar: only the System Tray
 pub fn view(theme: &Theme, width: f32) -> Row {
     let settings = Settings::read();
 
     let mut items: Vec<Box<dyn Widget>> = Vec::new();
-
-    if settings.flag("bar_battery") {
-        if let Some(battery) = battery(theme) {
-            items.push(Box::new(battery));
-        }
-    }
-
-    if settings.flag("bar_memory") {
-        items.push(Box::new(memory(theme)));
-    }
 
     if settings.flag("bar_tray") {
         items.push(Box::new(tray(theme)));
@@ -84,7 +75,7 @@ fn indicator(value: f32, color: Color, icon: &str, text: &str, theme: &Theme) ->
 }
 
 // none on a desktop without a battery
-fn battery(theme: &Theme) -> Option<Rectangle> {
+pub fn battery(theme: &Theme) -> Option<Rectangle> {
     let battery = Battery::read();
 
     if !battery.present() {
@@ -144,7 +135,7 @@ fn battery_icon(percent: u8, charging: bool) -> &'static str {
     }
 }
 
-fn memory(theme: &Theme) -> Rectangle {
+pub fn memory(theme: &Theme) -> Rectangle {
     let memory = Memory::read();
 
     let usage = f32::from(memory.percent()) / 100.0;
