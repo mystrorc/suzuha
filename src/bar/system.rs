@@ -74,25 +74,23 @@ fn indicator(value: f32, color: Color, icon: &str, text: &str, theme: &Theme) ->
         .align(Center)
 }
 
-// none on a desktop without a battery
+// Only shown when a battery is present and NOT on the charger (neither charging nor full/plugged-in)
 pub fn battery(theme: &Theme) -> Option<Rectangle> {
     let battery = Battery::read();
 
-    if !battery.present() {
+    if !battery.present() || battery.charging() || battery.full() {
         return None;
     }
 
     let percent = battery.percent();
 
-    let color = if battery.charging() {
-        theme.success
-    } else if percent > 20 {
+    let color = if percent > 20 {
         theme.accent
     } else {
         theme.danger
     };
 
-    let icon = battery_icon(percent, battery.charging());
+    let icon = battery_icon(percent, false);
 
     let text = format!("{percent}%");
 

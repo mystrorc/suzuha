@@ -71,13 +71,15 @@ pub fn workspaces_strip(monitor: &Monitor, theme: &Theme, style: &str) -> Rectan
     strip(monitor, &own, theme, style)
 }
 
-// "artist - title", or "No media" while nothing plays
-pub fn media(theme: &Theme) -> Rectangle {
+// Only shown while media is actively playing
+pub fn media(theme: &Theme) -> Option<Rectangle> {
     let media = Media::read();
 
-    let text = if media.title().is_empty() {
-        String::from("No media")
-    } else if media.artist().is_empty() {
+    if !media.playing() || media.title().is_empty() {
+        return None;
+    }
+
+    let text = if media.artist().is_empty() {
         String::from(media.title())
     } else {
         format!("{} - {}", media.artist(), media.title())
@@ -99,11 +101,13 @@ pub fn media(theme: &Theme) -> Rectangle {
     // the icon is about 9px wide, then a 7px gap and 20px of padding
     let width = 9.0 + 7.0 + text_width + 20.0;
 
-    pill::view(width, theme.surface)
-        .cursor(Pointer)
-        .on_click(|_| Media::play_pause())
-        .align_child(Center, Center)
-        .child(Row::new(children![icon, label]).gap(7.0).align(Center))
+    Some(
+        pill::view(width, theme.surface)
+            .cursor(Pointer)
+            .on_click(|_| Media::play_pause())
+            .align_child(Center, Center)
+            .child(Row::new(children![icon, label]).gap(7.0).align(Center)),
+    )
 }
 
 // the dots or numbers, with the sliding accent highlight drawn over them

@@ -46,9 +46,9 @@ pub fn build(page: &mut Page) {
     switch::add(page, "bar_workspaces", "Workspaces", "Show the workspace indicator");
     switch::add(page, "bar_workspace_name", "Workspace name", "Show the active workspace label");
     switch::add(page, "bar_audio", "Audio controls", "Show output and microphone rings");
-    switch::add(page, "bar_media", "Media", "Show current media information");
-    switch::add(page, "bar_clock", "Clock and date", "Show time and date in the center section");
-    switch::add(page, "bar_battery", "Battery", "Show battery status");
+    switch::add(page, "bar_media", "Media", "Show current media information when playing");
+    switch::add(page, "bar_clock", "Clock and date", "Show time and/or date in the center section");
+    switch::add(page, "bar_battery", "Battery", "Show battery status when unplugged");
     switch::add(page, "bar_memory", "Memory", "Show memory usage");
 
     switch::add(
@@ -60,6 +60,13 @@ pub fn build(page: &mut Page) {
 
     page.end_group();
 
+    choice::add(
+        page,
+        "clock_display",
+        "Clock format",
+        "Show just the time, just the date, or both in the bar",
+        &[("Both", "both"), ("Time only", "time"), ("Date only", "date")],
+    );
     switch::add(page, "clock_24_hour", "24-hour clock", "Use 24-hour time instead of AM/PM");
     switch::add(page, "clock_seconds", "Show seconds", "Include seconds in the status-bar clock");
 

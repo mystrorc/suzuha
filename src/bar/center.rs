@@ -39,7 +39,9 @@ pub fn view(monitor: &Monitor, theme: &Theme, width: f32) -> Row {
     }
 
     if show_media {
-        items.push(Box::new(workspaces::media(theme)));
+        if let Some(media) = workspaces::media(theme) {
+            items.push(Box::new(media));
+        }
     }
 
     if show_audio {
@@ -110,13 +112,22 @@ fn audio(theme: &Theme) -> Rectangle {
         .child(speaker)
 }
 
-// "09:05 PM  •  Tuesday, 29 Sep 2026" inside a surface pill so it stays legible without a bar background
+// Supports showing just time, just date, or both inside a surface pill
 fn clock(theme: &Theme) -> Rectangle {
     let clock = Clock::read();
+    let settings = Settings::read();
 
-    let seconds = Settings::read().flag("clock_seconds");
+    let seconds = settings.flag("clock_seconds");
+    let display = settings.text("clock_display");
 
-    let text = format!("{}  •  {}", clock.time(seconds), clock.date());
+    let text = match display {
+        "time" => clock.time(seconds),
+        "date" => String::from(clock.date()),
+        _ => format!("{}  •  {}", clock.time(seconds), clock.date()),
+    };
+
+    drop(settings);
+
     let text_width = pill::text_width(&text, 14.0);
 
     pill::view(text_width + 24.0, theme.surface)
