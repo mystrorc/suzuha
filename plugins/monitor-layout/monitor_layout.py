@@ -671,10 +671,35 @@ class MonitorLayoutWindow(Gtk.ApplicationWindow):
         else:
             self.status.set_label("Display identification active.")
 
+    def migrate_windows_from_disabled(self, disabled_names, target_output):
+        try:
+            res_ws = subprocess.run(["niri", "msg", "--json", "workspaces"], capture_output=True, text=True)
+            res_win = subprocess.run(["niri", "msg", "--json", "windows"], capture_output=True, text=True)
+            if res_ws.returncode != 0 or res_win.returncode != 0:
+                return
+            workspaces = json.loads(res_ws.stdout)
+            windows = json.loads(res_win.stdout)
+            ws_to_output = {ws["id"]: ws.get("output") for ws in workspaces}
+            for w in windows:
+                ws_id = w.get("workspace_id")
+                out_name = ws_to_output.get(ws_id)
+                if out_name in disabled_names:
+                    win_id = w["id"]
+                    run("niri", "msg", "action", "move-window-to-monitor", "--id", str(win_id), target_output, check=False)
+        except Exception as e:
+            print(f"Window migration error: {e}")
+
     def preview(self, _button):
         try:
             self.normalize()
             if is_niri():
+                disabled_names = set(m["name"] for m in self.monitors if m.get("disabled"))
+                active_monitors = [m for m in self.monitors if not m.get("disabled")]
+                target_output = active_monitors[0]["name"] if active_monitors else "eDP-1"
+
+                if disabled_names and target_output:
+                    self.migrate_windows_from_disabled(disabled_names, target_output)
+
                 for m in self.monitors:
                     if m.get("disabled"):
                         run("niri", "msg", "output", m["name"], "off", check=False)
