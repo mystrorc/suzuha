@@ -39,6 +39,8 @@ name = "amane-shell"
 version = "0.1.0"
 dependencies = [
  "amane",
+ "serde_json",
+ "zbus",
 ]
 
 [[package]]
