@@ -18,6 +18,21 @@ this is not a general-purpose shell. it's my own personal shell, and i'm not acc
 
 This fork ([`mystrorc/suzuha`](https://github.com/mystrorc/suzuha)) tracks upstream [`MystiaFin/suzuha`](https://github.com/MystiaFin/suzuha) while adding several major features, Omarchy plugin ports, appearance controls, and hardware integrations:
 
+- **System Info & Hardware Overview (`src/settings/pages/user.rs`):**
+  - Replaced the basic User Info page with a comprehensive **System info (`󰍹`)** tab.
+  - Displays a Hero System Card with the distribution logo, OS name, kernel release, dynamic system uptime, and CPU summary.
+  - Includes right-aligned hardware specification rows for Operating System, Kernel Release, System Uptime, Installed Packages (`rpm`), Processor, Total Memory, and Graphics Adapter (`lspci`), positioned directly above the lock screen User Profile configuration.
+- **Login Screen (SDDM Theme) Management (`src/settings/pages/appearance.rs`):**
+  - Integrated SDDM theme selector (`Sugar Dark`, `Sugar Candy`, `Astronaut`, `Catppuccin Mocha Mauve`, `Corners`, `Where Is My SDDM Theme`, `Sway Fedora`) into the **Appearance** settings page.
+  - Includes one-click **Apply** (writing to `/etc/sddm.conf.d/10-theme.conf`) and **Preview in test mode** (`sddm-greeter-qt6 --test-mode`).
+- **Input & Per-Device Pointer Configuration (`src/settings/pages/input.rs`):**
+  - Dedicated **Input (`󰌌`)** tab in Amane Settings for keyboard, touchpad, mouse, and trackball configuration.
+  - **Keyboard:** Layout, repeat rate (chars/sec), and repeat delay (ms).
+  - **Touchpad:** Natural scrolling, tap-to-click, and disable-while-typing toggles.
+  - **Per-Device Mouse & Trackball Controls:** Target pointing device selector (`Logitech G Pro (Mouse)`, `Logitech ERGO M575 (Trackball)`, and `All Mice (Global Default)`) with independent pointer speed sliders, flat acceleration toggles, left-handed mode, polling rate (`125Hz`–`1000Hz`), and hardware sensor DPI (`400`–`3200 DPI`) configured live via Niri (`~/.config/niri/settings-manager.kdl`) and `solaar`.
+- **Ethernet Status & Toggle in Utility Panel (`src/overlay/utility/wifi.rs`):**
+  - Added an **Ethernet (`󰈀`)** header section directly inside the Wi-Fi & Network utility flyout (`Eth (<interface>)`).
+  - Automatically detects physical wired interfaces via `/sys/class/net`, displays live connection state (`Connected` / `Disconnected` / `Off`), and provides an interactive on/off switch powered by `nmcli`.
 - **Quick Appearance Controls (Utility Panel):**
   - Dedicated **Appearance (`󰏘`)** tab in the Status Bar's Utility overlay (`amane ipc call utility show appearance`).
   - **Colors Subtab:** Mode picker (Auto / Light / Dark), Wallpaper accent toggle, 7 curated accent swatches (Blue, Rose, Peach, Green, Teal, Purple, Pink), and 34 full color schemes.
@@ -69,7 +84,7 @@ suzuha is my personal amane configuration: a full desktop shell in Rust rather t
 - Liquid shader that lets the bar and panels flow into each other, with rounded screen corners
 - Application launcher with a `>` command mode and a tmux project picker
 - Control center with media controls and a cava visualizer
-- Utility panel with Wi-Fi, Bluetooth, brightness, calendar, notifications, screen recorder, and appearance
+- Utility panel with Ethernet & Wi-Fi, Bluetooth, brightness, calendar, notifications, screen recorder, and appearance
 - Wallpaper picker with animated transitions and shuffle
 - Wallpaper-derived dynamic color palette, plus fixed Gruvbox and Catppuccin schemes
 - Floating desktop widgets that place themselves around the wallpaper
@@ -77,7 +92,7 @@ suzuha is my personal amane configuration: a full desktop shell in Rust rather t
 - File converter for images, video, audio, and documents
 - Power menu
 - logind-driven Wayland lock screen
-- Built-in settings window
+- Built-in settings window (with System Info, Appearance/SDDM, Input/Per-Device Pointers, Colors, Integrations, and Plugins)
 - Optional theme integrations for GTK, terminals, Alacritty, Zed, COSMIC, tmux, Vesktop, Spotify, btop, and cava
 
 ## Installation
@@ -136,6 +151,8 @@ These are only needed for their corresponding features:
 | `xdg-desktop-portal` | Picking a profile picture and accent-color broadcast |
 | `wf-recorder` | Screen recording (~5-12% CPU / 30-50MB RAM) |
 | `pactl` | Recording desktop sound and mic together |
+| `solaar` | Hardware DPI and polling rate configuration for Logitech mice/trackballs |
+| `sddm-greeter-qt6` | Live test-mode preview for SDDM login screen themes |
 
 ## IPC
 
@@ -214,7 +231,7 @@ Lock it from the power menu, or through IPC:
 amane ipc call lock
 ```
 
-The name and profile picture shown on the lock screen can be changed under **Settings → User**; they do not change the system account used for authentication.
+The name and profile picture shown on the lock screen can be changed under **Settings → System info**; they do not change the system account used for authentication.
 
 > [!CAUTION]
 > A Wayland session lock deliberately stays locked if the locker dies. If amane crashes while the session is locked, the compositor will not reveal the desktop; recover from another TTY if necessary.
@@ -236,108 +253,16 @@ The shell includes its own settings window, so normal day-to-day preferences don
 
 Current sections include:
 
+- System info
 - Appearance
-- User
+- Input
 - Colors
-- Wallpaper
-- Bar
 - Launcher
+- Wallpaper
+- Status bar
 - Behavior
 - Floating widgets
 - Weather
 - Integrations
 - Plugins
 - About
-
-Settings are stored in:
-
-```text
-~/.local/state/amane/settings
-```
-
-## Theme integrations
-
-External theme integrations are **opt-in**. Enabling one may generate configuration files or update a running application, so the shell does not enable them automatically.
-
-Supported integrations currently include:
-
-- GTK 3 / GTK 4 (with GNOME accent-color)
-- Alacritty (`settings-manager-colors.toml`)
-- Zed Editor (`themes/amane.json`)
-- COSMIC / Iced Applications (with built-in D-Bus daemon for live reloads)
-- kitty
-- foot
-- tmux
-- Vesktop
-- Spotify / Spicetify
-- btop
-- cava
-
-<details>
-<summary><strong>Generated files and side effects</strong></summary>
-
-Depending on which integrations are enabled, suzuha may write files like:
-
-```text
-~/.config/alacritty/settings-manager-colors.toml
-~/.config/zed/themes/amane.json
-~/.config/cosmic/com.system76.CosmicTheme.Mode/v1/is_dark
-~/.config/cosmic/com.system76.CosmicTheme.Dark/v2/accent
-~/.config/cosmic/com.system76.CosmicTheme.Light/v2/accent
-~/.local/state/amane/terminal-colors-kitty.conf
-~/.local/state/amane/terminal-colors-foot.ini
-~/.local/state/amane/tmux-colors.conf
-~/.config/btop/themes/amane.theme
-~/.config/cava/themes/amane
-~/.cache/amane/theme/spotify.css
-```
-
-GTK integration also dynamically symlinks `~/.config/gtk-3.0/gtk.css` and `~/.config/gtk-4.0/gtk.css`, and updates the active color-scheme and GNOME interface accent-color.
-
-For COSMIC / Iced applications, Amane exports a native `com.system76.CosmicSettingsDaemon` D-Bus bridge that broadcasts theme change events directly to running apps for live on-the-fly reloads.
-
-For tmux, add this to `~/.tmux.conf` so new sessions load the generated palette:
-
-```tmux
-source-file -q ~/.local/state/amane/tmux-colors.conf
-```
-
-For kitty, include the generated colors and let running windows be recolored live:
-
-```conf
-allow_remote_control socket-only
-listen_on unix:@amane-kitty
-include ~/.local/state/amane/terminal-colors-kitty.conf
-```
-
-</details>
-
-## Weather
-
-The floating weather widget's location is set under **Settings → Weather** with a place name, latitude, and longitude.
-
-Using approximate city-center coordinates is enough. Weather and air quality data are fetched directly from Open-Meteo; no IP geolocation service is used.
-
-## Project structure
-
-```text
-plugins/            standalone python and web plugins (e.g. monitor-layout)
-src/bar/            status bar, workspaces, pills, and the pomodoro ring
-src/overlay/        launcher, control center, utility panel, power menu, sysmon, eq
-src/floating/       floating desktop widgets and their placement
-src/wallpaper/      wallpaper, picker, transitions, and shuffle
-src/lock_screen/    lock screen and the logind listener
-src/settings/       settings window and its pages
-src/theme/          palette generation and color schemes
-src/integrations/   external theme/application integrations
-src/converter/      file converter
-src/motion/         springs, glides, and shared animation helpers
-shaders/            the liquid shader
-src/main.rs         root configuration and IPC routing
-```
-
-## Notes
-
-This is a personal config that I daily-drive and keep changing. Expect opinions, occasional breakage, and features that exist because I wanted them on my own desktop.
-
-If you use it as a base for your own setup, reading and modifying the Rust is very much part of the experience.
