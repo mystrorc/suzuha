@@ -19,11 +19,10 @@ pub use blurred::blurred;
 pub use shuffle::Shuffle;
 pub use state::{Wallpaper, choose};
 
-// only seen while the wallpaper rises in, the screen mask rounds the corners after that
-const FRAME_RADIUS: f32 = 28.0;
+// Square screen corners (no dark rounded corners at the top-left/top-right of the screen)
+const FRAME_RADIUS: f32 = 0.0;
 
-// the rounded edge of the area below the bar, the same as the screen mask's
-pub const SCREEN_RADIUS: f32 = 16.0;
+pub const SCREEN_RADIUS: f32 = 0.0;
 
 // under everything, taking no clicks; niri also shows it behind the overview
 pub fn view(monitor: &Monitor) -> LayerWindow {

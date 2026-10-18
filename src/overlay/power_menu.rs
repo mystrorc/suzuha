@@ -12,11 +12,11 @@ const WIDTH: f32 = 250.0;
 const HEIGHT: f32 = 330.0;
 const RADIUS: f32 = 30.0;
 
-// the panel reaches this far past the screen's left edge, so it stays melted into it
+// the panel reaches this far past the screen's left edge
 const EDGE_OVERLAP: f32 = 40.0;
 
-// a little above the window's top, so it melts into the bar's edge too
-const TOP: f32 = -10.0;
+// sits just below the bar so its top-right corner is cleanly rounded inward
+const TOP: f32 = 8.0;
 
 // how far past its own width it slides to let go of the edge
 const HIDDEN_MARGIN: f32 = 32.0;
@@ -99,7 +99,7 @@ pub fn view(overlay: &Overlay, theme: &Theme) -> Option<PanelView> {
         height: HEIGHT,
     };
 
-    // fully out it ends at its resting edge, and its melted corners spread a little past that
+    // fully out it ends at its resting edge, and its shadow spreads a little past that
     let reach = Region {
         x: 0.0,
         y: 0.0,

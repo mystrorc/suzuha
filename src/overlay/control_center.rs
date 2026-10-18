@@ -12,7 +12,7 @@ use amane::{Audio, Center, Column, Padding, Pointer, Rectangle, Row, Service, Te
 use crate::fonts;
 
 use super::{Overlay, PanelView, Region, power_devices, sysmon};
-use crate::liquid::{self, Blob};
+use crate::liquid::Blob;
 use crate::theme::Theme;
 
 const MAX_WIDTH: f32 = 780.0;
@@ -21,27 +21,22 @@ const TOP_BAR_HEIGHT: f32 = 36.0;
 const TOP_BAR_GAP: f32 = 12.0;
 const CARD_HEIGHT: f32 = 240.0;
 
-// 288 tall on screen (36px top-level tab bar + 12px gap + 240px content), plus what hides past the top edge
-const INNER_HEIGHT: f32 = TOP_BAR_HEIGHT + TOP_BAR_GAP + CARD_HEIGHT;
-const HEIGHT: f32 = INNER_HEIGHT + EDGE_OVERLAP + 34.0;
-const RADIUS: f32 = 30.0;
-
-/*
- * the panel reaches past the top edge by more than its corner radius, so
- * its sides meet the edge straight; with the round corners on screen the
- * melt narrows once it stops moving
- */
-const EDGE_OVERLAP: f32 = 40.0;
-
-// how far past its own height it slides to let go of the edge
-const HIDDEN_MARGIN: f32 = 32.0;
-
 const PADDING: Padding = Padding {
-    top: EDGE_OVERLAP + 16.0,
+    top: 18.0,
     right: 18.0,
     bottom: 18.0,
     left: 18.0,
 };
+
+// Self-contained floating card with all four corners rounded inward
+const INNER_HEIGHT: f32 = TOP_BAR_HEIGHT + TOP_BAR_GAP + CARD_HEIGHT;
+const HEIGHT: f32 = INNER_HEIGHT + PADDING.top + PADDING.bottom;
+const RADIUS: f32 = 28.0;
+
+// Distance below the bar when open, and extra room for the drop shadow
+const TOP_OFFSET: f32 = 8.0;
+const SHADOW_MARGIN: f32 = 20.0;
+const HIDDEN_MARGIN: f32 = 32.0;
 
 const GAP: f32 = 14.0;
 
@@ -65,7 +60,7 @@ pub fn view(overlay: &Overlay, theme: &Theme, screen: Region) -> Option<PanelVie
 
     let hidden = -(HEIGHT + HIDDEN_MARGIN);
 
-    let y = -EDGE_OVERLAP + hidden * (1.0 - progress);
+    let y = TOP_OFFSET + (hidden - TOP_OFFSET) * (1.0 - progress);
 
     let blob = Blob::new(x, y, width, HEIGHT)
         .radius(RADIUS)
@@ -78,12 +73,11 @@ pub fn view(overlay: &Overlay, theme: &Theme, screen: Region) -> Option<PanelVie
         height: HEIGHT,
     };
 
-    // fully out it hangs from the top edge, and its melted corners spread a little past its sides
     let reach = Region {
-        x: x - liquid::CONNECTION,
+        x: x - SHADOW_MARGIN,
         y: 0.0,
-        width: width + liquid::CONNECTION * 2.0,
-        height: -EDGE_OVERLAP + HEIGHT + liquid::CONNECTION,
+        width: width + SHADOW_MARGIN * 2.0,
+        height: TOP_OFFSET + HEIGHT + SHADOW_MARGIN,
     };
 
     Some(PanelView { blob, input, reach })

@@ -20,17 +20,17 @@ const WIDTH: f32 = 360.0;
 const MAX_HEIGHT: f32 = 800.0;
 const RADIUS: f32 = 30.0;
 
-// the panel reaches this far past the screen's right edge, so it stays melted into it
+// the panel reaches this far past the screen's right edge
 const EDGE_OVERLAP: f32 = 40.0;
 
-// a little above the window's top, so it melts into the bar's edge too
-const TOP: f32 = -10.0;
+// sits just below the bar so its top-left corner is cleanly rounded inward
+const TOP: f32 = 8.0;
 
 // how far past its own width it slides to let go of the edge
 const HIDDEN_MARGIN: f32 = 32.0;
 
 const PADDING: Padding = Padding {
-    top: 28.0,
+    top: 18.0,
     right: EDGE_OVERLAP + 16.0,
     bottom: 16.0,
     left: 16.0,
@@ -87,7 +87,7 @@ pub fn view(overlay: &Overlay, theme: &Theme, screen: Region) -> Option<PanelVie
         height,
     };
 
-    // fully out it starts at its resting edge, and its melted corners spread a little past that
+    // fully out it starts at its resting edge, and its shadow spreads a little past that
     let reach_width = WIDTH - EDGE_OVERLAP + liquid::CONNECTION;
 
     let reach = Region {

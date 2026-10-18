@@ -5,7 +5,8 @@ use amane::{Color, Parent, Rectangle, Stack, Widget};
 // the shader has room for this many blobs
 const MAX_BLOBS: usize = 8;
 
-const EDGE_OFFSET: f32 = 2.0;
+// Keep blobs from melting outward into the screen's edges since there is no solid top bar frame
+const EDGE_OFFSET: f32 = 10000.0;
 // how far apart two shapes start to flow into each other
 pub const CONNECTION: f32 = 24.0;
 
