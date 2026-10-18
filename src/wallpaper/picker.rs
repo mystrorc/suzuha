@@ -3,7 +3,7 @@ mod state;
 
 use amane::{
     Center, Color, Column, Full, Key, Keyboard, Layer, LayerWindow, Monitor, Parent,
-    Rectangle, Service, Stack, Text, Vertical, Widget, Zone, children,
+    Pointer, Rectangle, Service, Stack, Text, Widget, Zone, children,
 };
 
 use card::Place;
@@ -15,11 +15,11 @@ use crate::theme;
 
 pub use state::{Picker, list_folder};
 
-// the band's height, leaving at least this much of the screen above and below
+// the band\x27s height, leaving at least this much of the screen above and below
 const HEIGHT: f32 = 380.0;
 const SCREEN_GAP: f32 = 72.0;
 
-// the cards' largest size, and how much of the band's width one may take
+// the cards\x27 largest size, and how much of the band\x27s width one may take
 const CARD_WIDTH: f32 = 360.0;
 const CARD_HEIGHT: f32 = 240.0;
 const CARD_SHARE: f32 = 0.34;
@@ -56,16 +56,12 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
         Keyboard::None
     };
 
-    // as tall as the screen and moved up, so it lines up with the wallpaper around the band
-    let top = (screen_height - height) / 2.0;
-
     let opaque = Settings::read().flag("reduce_transparency");
 
     let backdrop = Rectangle::new()
         .width(screen_width)
-        .height(screen_height)
-        .fill(super::blurred(screen_width, screen_height))
-        .translate(0.0, -top);
+        .height(height)
+        .fill(super::blurred(screen_width, screen_height));
 
     // an alpha in the color, since fading the rectangle would give it a canvas of its own
     let tint = if opaque { 1.0 } else { TINT };
@@ -86,26 +82,43 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
     };
 
     let band = Stack::new(vec![Box::new(backdrop), Box::new(tint), content])
+        .width(screen_width)
+        .height(height);
+
+    let band_wrapper = Rectangle::new()
+        .width(screen_width)
+        .height(height)
+        .opacity(opacity)
+        .on_click(|_| {})
+        .child(band);
+
+    let scrim_alpha = (opacity * 55.0).round() as u8;
+
+    let root = Rectangle::new()
         .width(Parent)
-        .height(Parent);
+        .height(Parent)
+        .align_child(Center, Center)
+        .fill(Color::rgba(0, 0, 0, scrim_alpha))
+        .on_click(|_| Picker::write().hide())
+        .on_scroll(|scroll| {
+            if scroll.y > 0.0 || scroll.x > 0.0 {
+                Picker::write().slide(1);
+            } else if scroll.y < 0.0 || scroll.x < 0.0 {
+                Picker::write().slide(-1);
+            }
+        })
+        .child(band_wrapper);
 
     LayerWindow::new()
         .width(Full)
-        .height(height)
-        .anchor_vertical(Vertical::Middle)
+        .height(Full)
         .layer(Layer::Overlay)
         .space(Zone::Ignore)
         .keyboard(keyboard)
         .namespace("wallpaper-picker")
         .visible(visible)
         .on_key(key_pressed)
-        .child(
-            Rectangle::new()
-                .width(Parent)
-                .height(Parent)
-                .opacity(opacity)
-                .child(band),
-        )
+        .child(root)
 }
 
 /*
@@ -138,13 +151,23 @@ fn carousel(picker: &Picker, width: f32, height: f32) -> Stack {
             continue;
         }
 
+        let is_center = distance.abs() < 0.45;
+        let offset = if is_center {
+            0
+        } else if distance > 0.0 {
+            (distance.round() as i64).max(1)
+        } else {
+            (distance.round() as i64).min(-1)
+        };
+
         let place = Place {
             x: width / 2.0 + distance * spacing,
             y: height / 2.0,
             width: card_width,
             height: card_height,
             prominence,
-            offset: distance.round() as i64,
+            offset,
+            is_center,
         };
 
         places.push((path, place));
@@ -158,6 +181,45 @@ fn carousel(picker: &Picker, width: f32, height: f32) -> Stack {
     for (path, place) in places {
         cards.push(Box::new(card::view(path, place)));
     }
+
+    // Add navigation chevrons on the sides of the band
+    let theme = theme::current();
+    let btn_bg = Color::rgba(theme.surface.red(), theme.surface.green(), theme.surface.blue(), 200);
+
+    let left_btn = Rectangle::new()
+        .width(44.0)
+        .height(44.0)
+        .radius(22.0)
+        .fill(btn_bg)
+        .align_child(Center, Center)
+        .translate(24.0, height / 2.0 - 22.0)
+        .cursor(Pointer)
+        .on_click(|_| Picker::write().slide(-1))
+        .child(
+            Text::new("<")
+                .size(20.0)
+                .font(fonts::BODY)
+                .color(theme.text),
+        );
+
+    let right_btn = Rectangle::new()
+        .width(44.0)
+        .height(44.0)
+        .radius(22.0)
+        .fill(btn_bg)
+        .align_child(Center, Center)
+        .translate(width - 24.0 - 44.0, height / 2.0 - 22.0)
+        .cursor(Pointer)
+        .on_click(|_| Picker::write().slide(1))
+        .child(
+            Text::new(">")
+                .size(20.0)
+                .font(fonts::BODY)
+                .color(theme.text),
+        );
+
+    cards.push(Box::new(left_btn));
+    cards.push(Box::new(right_btn));
 
     Stack::new(cards).width(Parent).height(Parent)
 }
@@ -190,6 +252,18 @@ pub fn ipc(arguments: &[String]) -> String {
     match command {
         "show" => picker.show(&current),
         "hide" => picker.hide(),
+        "next" => {
+            if !picker.shown {
+                picker.show(&current);
+            }
+            picker.slide(1);
+        }
+        "prev" => {
+            if !picker.shown {
+                picker.show(&current);
+            }
+            picker.slide(-1);
+        }
         _ if picker.shown => picker.hide(),
         _ => picker.show(&current),
     }
@@ -205,11 +279,11 @@ fn key_pressed(key: Key) {
     }
 
     match key {
-        Key::Left | Key::Character('h') => picker.slide(-1),
-        Key::Right | Key::Character('l') => picker.slide(1),
+        Key::Left | Key::Down | Key::Character('h') | Key::Character('j') => picker.slide(-1),
+        Key::Right | Key::Up | Key::Tab | Key::Character('l') | Key::Character('k') => picker.slide(1),
         Key::Escape => picker.hide(),
 
-        Key::Enter => {
+        Key::Enter | Key::Space => {
             if let Some(path) = picker.selected() {
                 super::choose(path);
             }

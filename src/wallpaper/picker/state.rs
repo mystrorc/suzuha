@@ -47,7 +47,8 @@ impl Picker {
     pub fn show(&mut self, current: &str) {
         self.files = list_folder();
 
-        let index = self.files.iter().position(|file| file == current).unwrap_or(0);
+        let clean_current = current.strip_prefix("file://").unwrap_or(current).trim();
+        let index = self.files.iter().position(|file| file == clean_current).unwrap_or(0);
 
         self.target = index as i64;
         self.position = motion::spatial(index as f32, SLIDE);
