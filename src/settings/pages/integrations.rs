@@ -4,12 +4,18 @@ use super::super::page::Page;
 use super::super::{Confirm, Settings, Shown, switch};
 
 // the key, title, what the row says, and what turning it on does
-const INTEGRATIONS: [(&str, &str, &str, &str); 9] = [
+const INTEGRATIONS: [(&str, &str, &str, &str); 10] = [
     (
         "integration_gtk",
         "GTK",
         "GTK 3/4 and desktop preferences",
         "This writes generated GTK themes, changes gtk-theme, icon-theme and color-scheme through gsettings, replaces ~/.config/gtk-3.0/gtk.css and ~/.config/gtk-4.0/gtk.css with symlinks, and restarts xdg-desktop-portal-gnome.",
+    ),
+    (
+        "integration_flux",
+        "Flux File Manager",
+        "Live GTK4/Libadwaita theme and MIME icon colors for Flux",
+        "This writes generated Flux themes to ~/.local/share/flux/themes and ~/.config/flux/style.css, and updates ~/.config/flux/config.toml so running Flux windows live-reload colors automatically.",
     ),
     (
         "integration_terminal",

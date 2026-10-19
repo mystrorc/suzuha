@@ -7,7 +7,7 @@ use std::process::Command;
 use amane::Service;
 
 // every setting and the value it has until changed
-const DEFAULTS: [(&str, &str); 98] = [
+const DEFAULTS: [(&str, &str); 99] = [
     // appearance
     ("blur_strength", "1"),
     ("reduce_transparency", "false"),
@@ -114,6 +114,7 @@ const DEFAULTS: [(&str, &str); 98] = [
     ("weather_minutes", "15"),
     // integrations
     ("integration_gtk", "false"),
+    ("integration_flux", "true"),
     ("integration_terminal", "false"),
     ("integration_tmux", "false"),
     ("integration_vesktop", "false"),

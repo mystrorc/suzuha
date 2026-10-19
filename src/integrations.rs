@@ -1,6 +1,7 @@
 mod btop;
 mod cava;
 pub mod cosmic;
+mod flux;
 mod gtk;
 mod spotify;
 mod terminal;
@@ -18,8 +19,9 @@ use crate::settings::Settings;
 use crate::theme::{self, Theme};
 
 // the settings key and the writer of each program that takes the shell's colors
-const PROGRAMS: [(&str, fn(&Theme)); 9] = [
+const PROGRAMS: [(&str, fn(&Theme)); 10] = [
     ("integration_gtk", gtk::export),
+    ("integration_flux", flux::export),
     ("integration_terminal", terminal::export),
     ("integration_tmux", tmux::export),
     ("integration_vesktop", vesktop::export),
