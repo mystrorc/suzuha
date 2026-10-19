@@ -1,5 +1,5 @@
 /* ============================================================
-   Flux - A M A N E   D Y N A M I C
+   Flux - A M A N E   D Y N A M I C   (Translucent Glass)
    ============================================================ */
 
 /* ── Dynamic Color Ramp ── */
@@ -17,20 +17,20 @@
 @define-color cp_green      @GREEN@;
 @define-color cp_peach      @YELLOW@;
 
-/* ── Libadwaita Palette Mapping ── */
-@define-color window_bg_color      @cp_base;
+/* ── Libadwaita Palette Mapping (Translucent) ── */
+@define-color window_bg_color      alpha(@cp_base, @WINDOW_ALPHA@);
 @define-color window_fg_color      @cp_text;
-@define-color view_bg_color        @cp_base;
+@define-color view_bg_color        transparent;
 @define-color view_fg_color        @cp_text;
 @define-color headerbar_bg_color   transparent;
 @define-color headerbar_fg_color   @cp_text;
-@define-color sidebar_bg_color     @cp_mantle;
+@define-color sidebar_bg_color     alpha(@cp_mantle, @SIDEBAR_ALPHA@);
 @define-color sidebar_fg_color     @cp_text;
-@define-color card_bg_color        @cp_surface0;
+@define-color card_bg_color        alpha(@cp_surface0, @CARD_ALPHA@);
 @define-color card_fg_color        @cp_text;
-@define-color popover_bg_color     @cp_surface0;
+@define-color popover_bg_color     alpha(@cp_surface0, @POPOVER_ALPHA@);
 @define-color popover_fg_color     @cp_text;
-@define-color dialog_bg_color      @cp_base;
+@define-color dialog_bg_color      alpha(@cp_base, @POPOVER_ALPHA@);
 @define-color dialog_fg_color      @cp_text;
 @define-color accent_color         @cp_mauve;
 @define-color accent_bg_color      @cp_mauve;
@@ -42,26 +42,31 @@
 @define-color warning_color        @cp_peach;
 @define-color error_color          @cp_red;
 @define-color theme_fg_color       @cp_text;
-@define-color theme_bg_color       @cp_base;
+@define-color theme_bg_color       @window_bg_color;
 
 /* ── Theme Root Variables ── */
 :root {
   --accent-color: @ACCENT@;
-  --shadow: rgba(0, 0, 0, 0.5);
-  --shadow-hover: rgba(0, 0, 0, 0.65);
+  --shadow: rgba(0, 0, 0, 0.35);
+  --shadow-hover: rgba(0, 0, 0, 0.5);
   --font-main: "Poppins", "Inter", system-ui, sans-serif;
   --font-mono: "JetBrainsMono Nerd Font", "JetBrains Mono", monospace;
   letter-spacing: 0px;
 }
 
-/* ── Rounded Window Chrome ── */
+/* ── Translucent Rounded Window Chrome ── */
 window,
 window.background,
 window.csd,
-window.solid-csd {
+window.solid-csd,
+.background {
   background-color: @window_bg_color;
   color: @window_fg_color;
   border-radius: 12px;
+}
+
+window > box {
+  background-color: transparent;
 }
 
 /* ── ToolbarView Integration ── */
@@ -125,12 +130,12 @@ headerbar togglebutton:active {
   color: @accent_color;
 }
 
-/* ── Sidebar & Navigation Tree (Dark) ── */
+/* ── Sidebar & Navigation Tree (Glass Pane) ── */
 .sidebar {
-  background-color: color-mix(in srgb, @window_bg_color 20%, @cp_mantle 80%);
+  background-color: @sidebar_bg_color;
   border-radius: 14px;
   border: 1px solid alpha(@cp_surface1, 0.4);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 }
 
 .sidebar-inner {
@@ -180,7 +185,7 @@ headerbar togglebutton:active {
 }
 
 .sidebar-row:not(.sidebar-section):selected label {
-  color: @cp_base;
+  color: @accent_fg_color;
   font-weight: bold;
 }
 
@@ -216,9 +221,9 @@ headerbar togglebutton:active {
 }
 
 .sidebar-mount {
-  background: transparent;
+  background: alpha(@theme_fg_color, 0.02);
   border: 1px solid alpha(@cp_surface1, 0.4);
-  border-bottom-color: rgba(0, 0, 0, 0.12);
+  border-bottom-color: rgba(0, 0, 0, 0.2);
   border-radius: 8px;
   min-height: 22px;
   padding: 1px 6px;
@@ -259,20 +264,20 @@ button.eject-button:active {
 }
 
 .sidebar-row:not(.sidebar-section):selected button.eject-button {
-  color: @cp_base;
+  color: @accent_fg_color;
   opacity: 0.9;
 }
 
 .sidebar-row:not(.sidebar-section):selected button.eject-button:hover {
-  background-color: alpha(@cp_base, 0.2);
-  color: @cp_base;
+  background-color: alpha(@accent_fg_color, 0.2);
+  color: @accent_fg_color;
   opacity: 1;
 }
 
-/* ── Grid & List Item Views ── */
+/* ── Grid & List Item Views (Transparent Viewport) ── */
 gridview,
 listview {
-  background-color: @window_bg_color;
+  background-color: transparent;
   padding: 0px 24px 16px 24px;
 }
 
@@ -286,10 +291,10 @@ gridview child {
   border-radius: 18px;
   padding: 12px;
   margin: 6px;
-  border: none;
+  border: 1px solid alpha(@cp_surface1, 0.4);
   box-shadow:
-    0 0 0 1px alpha(@cp_surface1, 0.4),
-    0 2px 8px var(--shadow);
+    0 8px 32px 0 rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   transition:
     background-color 200ms ease,
     box-shadow 200ms ease,
@@ -297,10 +302,10 @@ gridview child {
 }
 
 .flux-card:hover {
-  background-color: alpha(@theme_fg_color, 0.06);
+  background-color: alpha(@cp_surface1, 0.6);
   box-shadow:
-    0 0 0 1px alpha(@accent_color, 0.3),
-    0 8px 16px var(--shadow-hover);
+    0 0 0 1px alpha(@accent_color, 0.4),
+    0 12px 28px 0 var(--shadow-hover);
   transform: translateY(-4px);
 }
 
@@ -312,9 +317,10 @@ gridview child {
 }
 
 gridview child:selected .flux-card {
+  background-color: alpha(@accent_color, 0.2);
   box-shadow:
     0 0 0 2px @accent_color,
-    0 6px 18px alpha(@accent_color, 0.35);
+    0 8px 24px alpha(@accent_color, 0.35);
   transform: translateY(-2px);
 }
 
@@ -338,7 +344,7 @@ gridview child:selected .flux-label {
   letter-spacing: -0.01em;
   padding: 2px 10px;
   min-width: 170px;
-  background-color: alpha(@theme_fg_color, 0.07);
+  background-color: alpha(@theme_fg_color, 0.06);
   border: 1px solid alpha(@theme_fg_color, 0.1);
   border-radius: 99px;
   color: alpha(@theme_fg_color, 0.7);
@@ -355,14 +361,14 @@ gridview child:hover .flux-list-info {
 }
 
 gridview child:selected .flux-list-info {
-  background-color: alpha(@cp_text, 0.22);
-  border-color: alpha(@cp_text, 0.35);
+  background-color: alpha(@accent_color, 0.25);
+  border-color: alpha(@accent_color, 0.5);
   color: @cp_text;
   font-weight: 600;
 }
 
 entry.flux-rename-entry {
-  background-color: color-mix(in srgb, @window_bg_color, @theme_fg_color 10%);
+  background-color: alpha(@cp_base, 0.85);
   border: 1px solid @accent_color;
   box-shadow: 0 0 0 2px alpha(@accent_color, 0.35);
   padding: 2px 8px;
@@ -451,7 +457,7 @@ button.breadcrumb-btn label {
   letter-spacing: 0px;
 }
 
-/* ── Popovers & Context Menus (Clean & Borderless Outer Shell) ── */
+/* ── Popovers & Context Menus (Glass Shell) ── */
 popover,
 popover.background,
 popover.menu {
@@ -469,7 +475,7 @@ popover.background contents {
   border: 1px solid alpha(@cp_surface1, 0.5);
   outline: none;
   border-radius: 12px;
-  box-shadow: 0 8px 24px var(--shadow);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
   padding: 4px;
 }
 
@@ -531,13 +537,13 @@ passwordentry,
 entry text,
 searchentry text,
 passwordentry text {
-  background-color: color-mix(in srgb, @window_bg_color, @theme_fg_color 5%);
-  border: none;
+  background-color: alpha(@cp_surface0, 0.55);
+  border: 1px solid alpha(@cp_surface1, 0.4);
   border-radius: 22px;
   padding: 4px 12px;
   color: @theme_fg_color;
-  caret-color: @theme_fg_color;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  caret-color: @accent_color;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
   letter-spacing: 0px;
 }
 
@@ -553,6 +559,7 @@ passwordentry:focus,
 entry:focus-within,
 searchentry:focus-within,
 passwordentry:focus-within {
+  border-color: @accent_color;
   box-shadow: 0 0 0 3px alpha(@accent_color, 0.3);
 }
 
@@ -622,7 +629,7 @@ entry button.clear:active,
 entry button.close:active,
 searchentry button:active,
 searchentry button.image-button:active,
-searchentry button.clear:active,
+searchentry button.clear,
 searchentry button.close:active,
 passwordentry button:active,
 passwordentry button.image-button:active,
@@ -639,10 +646,10 @@ textview text {
   caret-color: @theme_fg_color;
 }
 
-/* ── Status Bar & Transfers (Floating Card Style) ── */
+/* ── Status Bar & Transfers (Floating Glass Card) ── */
 .selection-status {
   font-size: 1em;
-  background-color: color-mix(in srgb, @window_bg_color 85%, @cp_mantle 15%);
+  background-color: alpha(@cp_mantle, 0.78);
   border: 1px solid alpha(@cp_surface1, 0.4);
   border-radius: 0.9em;
   padding: 0.45em 1.2em;
@@ -713,7 +720,7 @@ textview text {
 
 .selection-status button.flat:active {
   background-color: @accent_bg_color;
-  color: @cp_base;
+  color: @accent_fg_color;
 }
 
 .selection-status button.destructive-action {
@@ -743,7 +750,7 @@ textview text {
 }
 
 window:backdrop .selection-status {
-  background-color: alpha(@window_bg_color, 0.95);
+  background-color: alpha(@cp_mantle, 0.6);
   border-top-color: rgba(255, 255, 255, 0.04);
 }
 
@@ -769,7 +776,7 @@ window:backdrop .selection-status button.destructive-action {
 }
 
 .quick-panel {
-  background: color-mix(in srgb, @window_bg_color 80%, @cp_mantle 20%);
+  background: alpha(@cp_mantle, 0.78);
   border: 1px solid alpha(@cp_surface1, 0.4);
   border-radius: 0.9em;
   padding: 0.3em 0.5em;
@@ -846,7 +853,7 @@ window:backdrop .selection-status button.destructive-action {
   box-shadow:
     0 0.15em 0.6em alpha(@accent_color, 0.45),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  color: @cp_base;
+  color: @accent_fg_color;
 }
 
 .quick-panel button:active label,
@@ -855,7 +862,7 @@ window:backdrop .selection-status button.destructive-action {
 .quick-panel-tab:active label,
 .quick-panel-tab:checked label,
 .quick-panel-tab.suggested-action label {
-  color: @cp_base;
+  color: @accent_fg_color;
   font-weight: 700;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
@@ -958,8 +965,8 @@ radio:disabled {
 
 spinbutton,
 spinbutton text {
-  background-color: alpha(@theme_fg_color, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background-color: alpha(@cp_surface0, 0.45);
+  border: 1px solid alpha(@cp_surface1, 0.4);
   border-radius: 0.6em;
   color: @theme_fg_color;
   caret-color: @theme_fg_color;
@@ -983,8 +990,8 @@ spinbutton > button:hover {
 
 dropdown,
 combobox {
-  background-color: alpha(@theme_fg_color, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background-color: alpha(@cp_surface0, 0.45);
+  border: 1px solid alpha(@cp_surface1, 0.4);
   border-radius: 0.6em;
   color: @theme_fg_color;
   min-height: 2.1em;
@@ -1097,7 +1104,7 @@ notebook > header > tabs > tab:checked {
 }
 
 .boxed-list {
-  background: @card_bg_color;
+  background: alpha(@cp_surface0, 0.38);
   border-radius: 0.9em;
   border: 1px solid alpha(@cp_surface1, 0.4);
 }
@@ -1114,7 +1121,7 @@ row {
 }
 
 row:selected {
-  background: alpha(@accent_bg_color, 0.08);
+  background: alpha(@accent_bg_color, 0.15);
   color: @accent_color;
 }
 
@@ -1124,7 +1131,7 @@ row:selected {
 }
 
 .view:selected {
-  background: alpha(@accent_bg_color, 0.08);
+  background: alpha(@accent_bg_color, 0.15);
   color: @accent_color;
 }
 
@@ -1212,7 +1219,7 @@ adwpreferencesgroup label.description,
 
 /* general typography and labels */
 tooltip.background {
-  background-color: alpha(@window_bg_color, 0.95);
+  background-color: @popover_bg_color;
   border: 1px solid alpha(@cp_surface1, 0.4);
   border-radius: 0.6em;
   color: @theme_fg_color;
@@ -1426,7 +1433,7 @@ toastoverlay.quick-dock-active toast {
 
 toast {
   font-size: 1em;
-  background-color: alpha(@window_bg_color, 0.95);
+  background-color: @popover_bg_color;
   border: 1px solid alpha(@window_fg_color, 0.1);
   border-radius: 0.9em;
   box-shadow: 0 0.3em 1.2em alpha(black, 0.15);

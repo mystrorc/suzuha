@@ -1,3 +1,5 @@
+use std::fs;
+
 use amane::Color;
 
 use super::{config_home, hex, state_home, write};
@@ -38,6 +40,10 @@ pub fn export(theme: &Theme) {
     // Update active alacritty config: ~/.config/alacritty/settings-manager-colors.toml
     let alacritty_conf = format!("{}/alacritty/settings-manager-colors.toml", config_home());
     write(&alacritty_conf, &alacritty_cfg);
+
+    // Update termusic TUI config so it preserves terminal transparency ("Reset") and follows theme colors
+    let termusic_conf = format!("{}/termusic/tui.toml", config_home());
+    update_termusic_config(&termusic_conf, theme, &colors);
 
     reload_kitty(&kitty);
     recolor_foot(theme, &colors, &folder);
@@ -145,6 +151,64 @@ fn alacritty_config(theme: &Theme, colors: &Colors) -> String {
         hex(colors.ansi[14]),
         hex(colors.ansi[15]),
     )
+}
+
+fn update_termusic_config(path: &str, theme: &Theme, colors: &Colors) {
+    let Ok(existing) = fs::read_to_string(path) else {
+        return;
+    };
+
+    let mut out: Vec<String> = Vec::new();
+    let mut section = String::new();
+
+    for line in existing.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with('[') && trimmed.ends_with(']') {
+            section = trimmed[1..trimmed.len() - 1].trim().to_string();
+            out.push(line.to_string());
+            continue;
+        }
+
+        if section.starts_with("style.") && trimmed.starts_with("background_color =") {
+            out.push(String::from("background_color = \"Reset\""));
+            continue;
+        }
+
+        let replacement = match (section.as_str(), trimmed.split('=').next().map(str::trim)) {
+            ("theme", Some("name")) => Some(String::from("name = \"Amane\"")),
+            ("theme.primary", Some("background")) => Some(format!("background = \"{}\"", hex(colors.background))),
+            ("theme.primary", Some("foreground")) => Some(format!("foreground = \"{}\"", hex(colors.foreground))),
+            ("theme.cursor", Some("text")) => Some(format!("text = \"{}\"", hex(theme.on_accent))),
+            ("theme.cursor", Some("cursor")) => Some(format!("cursor = \"{}\"", hex(colors.cursor))),
+            ("theme.normal", Some("black")) => Some(format!("black = \"{}\"", hex(colors.ansi[0]))),
+            ("theme.normal", Some("red")) => Some(format!("red = \"{}\"", hex(colors.ansi[1]))),
+            ("theme.normal", Some("green")) => Some(format!("green = \"{}\"", hex(colors.ansi[2]))),
+            ("theme.normal", Some("yellow")) => Some(format!("yellow = \"{}\"", hex(colors.ansi[3]))),
+            ("theme.normal", Some("blue")) => Some(format!("blue = \"{}\"", hex(colors.ansi[4]))),
+            ("theme.normal", Some("magenta")) => Some(format!("magenta = \"{}\"", hex(colors.ansi[5]))),
+            ("theme.normal", Some("cyan")) => Some(format!("cyan = \"{}\"", hex(colors.ansi[6]))),
+            ("theme.normal", Some("white")) => Some(format!("white = \"{}\"", hex(colors.ansi[7]))),
+            ("theme.bright", Some("black")) => Some(format!("black = \"{}\"", hex(colors.ansi[8]))),
+            ("theme.bright", Some("red")) => Some(format!("red = \"{}\"", hex(colors.ansi[9]))),
+            ("theme.bright", Some("green")) => Some(format!("green = \"{}\"", hex(colors.ansi[10]))),
+            ("theme.bright", Some("yellow")) => Some(format!("yellow = \"{}\"", hex(colors.ansi[11]))),
+            ("theme.bright", Some("blue")) => Some(format!("blue = \"{}\"", hex(colors.ansi[12]))),
+            ("theme.bright", Some("magenta")) => Some(format!("magenta = \"{}\"", hex(colors.ansi[13]))),
+            ("theme.bright", Some("cyan")) => Some(format!("cyan = \"{}\"", hex(colors.ansi[14]))),
+            ("theme.bright", Some("white")) => Some(format!("white = \"{}\"", hex(colors.ansi[15]))),
+            _ => None,
+        };
+
+        if let Some(rep) = replacement {
+            out.push(rep);
+        } else {
+            out.push(line.to_string());
+        }
+    }
+
+    let mut updated = out.join("\n");
+    updated.push('\n');
+    write(path, &updated);
 }
 
 fn kitty_config(theme: &Theme, colors: &Colors) -> String {
