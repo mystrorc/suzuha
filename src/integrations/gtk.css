@@ -39,6 +39,14 @@
 }
 
 window,
+window.background,
+window.csd,
+window.solid-csd {
+  background-color: @BACKGROUND@;
+  color: @FOREGROUND@;
+  border-radius: 12px;
+}
+
 .background,
 .view,
 textview text,
@@ -54,6 +62,8 @@ menubar {
   background-color: @SURFACE@;
   color: @FOREGROUND@;
   border: none;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
   box-shadow: none;
   padding: 4px;
 }

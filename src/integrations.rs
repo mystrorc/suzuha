@@ -3,6 +3,7 @@ mod cava;
 pub mod cosmic;
 mod flux;
 mod gtk;
+mod niri;
 mod spotify;
 mod terminal;
 mod tmux;
@@ -84,9 +85,19 @@ fn run_export_if_changed() {
         }
     }
 
+    let window_fp = format!(
+        ":r{}:b{}:i{}:g{}:s{}",
+        settings.text("window_corner_radius"),
+        settings.text("window_border_width"),
+        settings.text("window_inactive_border"),
+        settings.text("window_gaps"),
+        settings.text("window_shadows"),
+    );
+
     drop(settings);
 
     let mut fp = fingerprint(&theme);
+    fp.push_str(&window_fp);
 
     for (key, _) in &turned_on {
         fp.push_str(key);
@@ -99,6 +110,9 @@ fn run_export_if_changed() {
         }
         *written = fp;
     }
+
+    // Always keep Niri window corners and border colors synced with the active theme
+    niri::export(&theme);
 
     for (_, export) in turned_on {
         export(&theme);

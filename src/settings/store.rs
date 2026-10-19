@@ -7,7 +7,7 @@ use std::process::Command;
 use amane::Service;
 
 // every setting and the value it has until changed
-const DEFAULTS: [(&str, &str); 99] = [
+const DEFAULTS: [(&str, &str); 104] = [
     // appearance
     ("blur_strength", "1"),
     ("reduce_transparency", "false"),
@@ -15,6 +15,11 @@ const DEFAULTS: [(&str, &str); 99] = [
     ("cursor_theme", "Adwaita"),
     ("cursor_size", "24"),
     ("shake_cursor", "true"),
+    ("window_corner_radius", "12"),
+    ("window_border_width", "2"),
+    ("window_inactive_border", "true"),
+    ("window_gaps", "8"),
+    ("window_shadows", "true"),
     // login screen
     ("sddm_theme", "sugar-dark"),
     // input - keyboard
@@ -323,17 +328,9 @@ fn apply_appearance(settings: &Settings) {
 
     let home = env::var("HOME").unwrap_or_default();
     let cursor_kdl = format!("{home}/.config/niri/cursor.kdl");
-    let niri_config = format!("{home}/.config/niri/config.kdl");
 
     let config_content = format!("cursor {{\n    xcursor-theme \"{theme}\"\n    xcursor-size {size}\n}}\n");
     let _ = fs::write(&cursor_kdl, config_content);
-
-    if let Ok(main_config) = fs::read_to_string(&niri_config) {
-        if !main_config.contains("include \"cursor.kdl\"") {
-            let updated = format!("include \"cursor.kdl\"\n{main_config}");
-            let _ = fs::write(&niri_config, updated);
-        }
-    }
 
     let _ = Command::new("niri").args(["msg", "action", "load-config-file"]).spawn();
 

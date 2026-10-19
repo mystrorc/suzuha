@@ -54,10 +54,20 @@
   letter-spacing: 0px;
 }
 
+/* ── Rounded Window Chrome ── */
+window,
+window.background,
+window.csd,
+window.solid-csd {
+  background-color: @window_bg_color;
+  color: @window_fg_color;
+  border-radius: 12px;
+}
 
 /* ── ToolbarView Integration ── */
 toolbarview {
   background-color: transparent;
+  border-radius: 12px;
 }
 
 /* ── HeaderBar & Navigation ── */
@@ -66,6 +76,8 @@ headerbar {
   padding: 4px 12px;
   min-height: 38px;
   border: none;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
   box-shadow: none;
   font-family: var(--font-main);
   letter-spacing: 0px;
@@ -587,7 +599,7 @@ entry button.clear:hover,
 entry button.close:hover,
 searchentry button:hover,
 searchentry button.image-button:hover,
-searchentry button.clear:hover,
+searchentry button.clear,
 searchentry button.close:hover,
 passwordentry button:hover,
 passwordentry button.image-button:hover,
@@ -1325,23 +1337,23 @@ tabbar tab:hover {
 tabbar tab:checked,
 tabbar tab:selected,
 tabbar tab.selected {
-  background-color: #007aff;
+  background-color: @accent_bg_color;
   background-image: linear-gradient(
     to bottom,
     rgba(255, 255, 255, 0.22) 0%,
     rgba(0, 0, 0, 0.1) 100%
   );
-  border: 1px solid rgba(0, 122, 255, 0.8);
+  border: 1px solid alpha(@accent_color, 0.8);
   border-top-color: rgba(255, 255, 255, 0.4);
   box-shadow:
-    0 0.15em 0.6em rgba(0, 122, 255, 0.45),
+    0 0.15em 0.6em alpha(@accent_color, 0.45),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 tabbar tab:checked:hover,
 tabbar tab:selected:hover,
 tabbar tab.selected:hover {
-  background-color: #1a8cff;
+  background-color: alpha(@accent_bg_color, 0.9);
   background-image: linear-gradient(
     to bottom,
     rgba(255, 255, 255, 0.32) 0%,
@@ -1363,9 +1375,9 @@ tabbar tab:hover label {
 tabbar tab:checked label,
 tabbar tab:selected label,
 tabbar tab.selected label {
-  color: #ffffff;
+  color: @accent_fg_color;
   font-weight: 700;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 tabbar tab button.flat {
@@ -1391,20 +1403,20 @@ tabbar tab:hover button.flat {
 tabbar tab:checked button.flat,
 tabbar tab:selected button.flat,
 tabbar tab.selected button.flat {
-  color: #ffffff;
+  color: @accent_fg_color;
   opacity: 0.9;
 }
 
 tabbar tab button.flat:hover {
   background-color: rgba(255, 255, 255, 0.18);
-  color: #ffffff;
+  color: @accent_fg_color;
 }
 
 tabbar tab:checked button.flat:hover,
 tabbar tab:selected button.flat:hover,
 tabbar tab.selected button.flat:hover {
   background-color: rgba(255, 255, 255, 0.3);
-  color: #ffffff;
+  color: @accent_fg_color;
 }
 
 /* toast notifications */

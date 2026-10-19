@@ -97,7 +97,19 @@ pub fn export(theme: &Theme) {
     let is_dark_str = if theme.light { "false\n" } else { "true\n" };
     write(&format!("{cosmic_dir}/com.system76.CosmicTheme.Mode/v1/is_dark"), is_dark_str);
 
-    let reduce_transparency = crate::settings::Settings::read().flag("reduce_transparency");
+    let settings = crate::settings::Settings::read();
+    let reduce_transparency = settings.flag("reduce_transparency");
+    let corner_radius = settings.number("window_corner_radius");
+    drop(settings);
+
+    let roundness_str = if corner_radius <= 0.0 {
+        "Square\n"
+    } else if corner_radius <= 6.0 {
+        "SlightlyRound\n"
+    } else {
+        "Round\n"
+    };
+
     let (bg_alpha_hex, bg_alpha_float) = if reduce_transparency {
         ("FF", 1.0)
     } else {
@@ -148,6 +160,7 @@ pub fn export(theme: &Theme) {
         write(&format!("{builder_v1}/warning"), &ron_color_v1(active_theme.accent_hover));
         write(&format!("{builder_v1}/frosted_windows"), frosted_str);
         write(&format!("{builder_v1}/frosted"), blur_str);
+        write(&format!("{builder_v1}/roundness"), roundness_str);
 
         write(&format!("{builder_v2}/accent"), &hex_color_v2(active_theme.accent));
         write(&format!("{builder_v2}/bg_color"), &hex_color_v2_bg(active_theme.background));
@@ -158,6 +171,7 @@ pub fn export(theme: &Theme) {
         write(&format!("{builder_v2}/warning"), &hex_color_v2(active_theme.accent_hover));
         write(&format!("{builder_v2}/frosted_windows"), frosted_str);
         write(&format!("{builder_v2}/frosted"), blur_str);
+        write(&format!("{builder_v2}/roundness"), roundness_str);
 
         let accent_str = hex_alpha(active_theme.accent);
         let bg_str = hex_bg(active_theme.background);
@@ -241,6 +255,7 @@ pub fn export(theme: &Theme) {
             write(&format!("{theme_dir}/transparent_background"), &transparent_bg_block);
             write(&format!("{theme_dir}/frosted_windows"), frosted_str);
             write(&format!("{theme_dir}/frosted"), blur_str);
+            write(&format!("{theme_dir}/roundness"), roundness_str);
             write(&format!("{theme_dir}/name"), "\"Amane\"\n");
         }
     }
@@ -258,11 +273,13 @@ pub fn export(theme: &Theme) {
         emit_changed(&format!("com.system76.CosmicTheme.{mode}"), "transparent_background");
         emit_changed(&format!("com.system76.CosmicTheme.{mode}"), "frosted_windows");
         emit_changed(&format!("com.system76.CosmicTheme.{mode}"), "frosted");
+        emit_changed(&format!("com.system76.CosmicTheme.{mode}"), "roundness");
         emit_changed(&format!("com.system76.CosmicTheme.{mode}"), "primary");
         emit_changed(&format!("com.system76.CosmicTheme.{mode}"), "name");
         emit_changed(&format!("com.system76.CosmicTheme.{mode}.Builder"), "accent");
         emit_changed(&format!("com.system76.CosmicTheme.{mode}.Builder"), "bg_color");
         emit_changed(&format!("com.system76.CosmicTheme.{mode}.Builder"), "frosted_windows");
         emit_changed(&format!("com.system76.CosmicTheme.{mode}.Builder"), "frosted");
+        emit_changed(&format!("com.system76.CosmicTheme.{mode}.Builder"), "roundness");
     }
 }

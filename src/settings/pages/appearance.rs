@@ -56,7 +56,63 @@ pub const SDDM_THEMES: [(&str, &str); 7] = [
 ];
 
 pub fn build(page: &mut Page) {
-    // Typography
+    // Window Appearance (Corners, Borders, Gaps, Shadows)
+    slider::add(
+        page,
+        "window_corner_radius",
+        "Window corner radius",
+        "Rounded corner radius clipped across all windows and borders",
+        Range {
+            min: 0.0,
+            max: 24.0,
+            step: 2.0,
+            label: slider::pixels,
+        },
+    );
+
+    slider::add(
+        page,
+        "window_border_width",
+        "Window border width",
+        "Thickness of the rounded border around windows",
+        Range {
+            min: 0.0,
+            max: 6.0,
+            step: 1.0,
+            label: slider::pixels,
+        },
+    );
+
+    switch::add(
+        page,
+        "window_inactive_border",
+        "Inactive window border",
+        "Show a subtle rounded border around unfocused windows",
+    );
+
+    slider::add(
+        page,
+        "window_gaps",
+        "Window gaps",
+        "Spacing between tiled windows on the desktop",
+        Range {
+            min: 0.0,
+            max: 24.0,
+            step: 2.0,
+            label: slider::pixels,
+        },
+    );
+
+    switch::add(
+        page,
+        "window_shadows",
+        "Window drop shadows",
+        "Render soft rounded drop shadows behind windows",
+    );
+
+    page.end_group();
+
+    // Typography & Cursors
     choice::add(
         page,
         "font_family",
@@ -65,7 +121,6 @@ pub fn build(page: &mut Page) {
         &FONTS,
     );
 
-    // Mouse Pointer & Cursors
     choice::add(
         page,
         "cursor_theme",
@@ -107,7 +162,7 @@ pub fn build(page: &mut Page) {
         page,
         "reduce_transparency",
         "Reduce transparency",
-        "Solid wallpaper picker background with no blur",
+        "Solid wallpaper picker and app backgrounds with no blur",
     );
 
     page.end_group();
