@@ -1,3 +1,6 @@
+use std::fs;
+use std::sync::OnceLock;
+
 use amane::{
     Button, Center, Color, Full, Media, Monitor, Parent, Pointer, Rectangle, Row, Service, Stack, Start, Text,
     Weight, Widget, Workspace, Workspaces, children,
@@ -9,8 +12,6 @@ use crate::overlay::Overlay;
 use crate::settings::Settings;
 use crate::theme::Theme;
 
-// the logo and the inactive dot, the active star is drawn in star.rs
-const LOGO: &str = "\u{f1105}";
 const INACTIVE: &str = "\u{f444}";
 const MEDIA_ICON: &str = "󰎈";
 
@@ -26,7 +27,40 @@ const STRIP_PADDING: f32 = 4.0;
 // with the row's 10px gap this keeps 20px from the screen edge
 const EDGE: f32 = 10.0;
 
-// Left section of the bar: only the Power Menu button
+static DISTRO_LOGO: OnceLock<&'static str> = OnceLock::new();
+
+// Detects the current distro from /etc/os-release and returns its Nerd Font icon
+fn distro_logo() -> &'static str {
+    DISTRO_LOGO.get_or_init(|| {
+        for path in ["/etc/os-release", "/usr/lib/os-release"] {
+            if let Ok(content) = fs::read_to_string(path) {
+                for line in content.lines() {
+                    if let Some(id) = line.strip_prefix("ID=") {
+                        let id = id.trim().trim_matches('"').trim_matches('\'').to_lowercase();
+                        return match id.as_str() {
+                            "fedora" => "\u{f30a}",
+                            "nixos" => "\u{f313}",
+                            "arch" | "cachyos" | "endeavouros" => "\u{f303}",
+                            "ubuntu" => "\u{f31b}",
+                            "debian" => "\u{f306}",
+                            "opensuse" | "opensuse-tumbleweed" | "opensuse-leap" => "\u{f314}",
+                            "gentoo" => "\u{f30d}",
+                            "void" => "\u{f32e}",
+                            "alpine" => "\u{f300}",
+                            "manjaro" => "\u{f312}",
+                            "linuxmint" => "\u{f30e}",
+                            "pop" => "\u{f32a}",
+                            _ => "\u{f31a}",
+                        };
+                    }
+                }
+            }
+        }
+        "\u{f30a}"
+    })
+}
+
+// Left section of the bar: only the Power Menu button with the centered distro logo
 pub fn view(theme: &Theme, width: f32) -> Row {
     let logo = Rectangle::new()
         .width(34.0)
@@ -36,7 +70,13 @@ pub fn view(theme: &Theme, width: f32) -> Row {
         .cursor(Pointer)
         .on_click(|_| Overlay::toggle_power_menu())
         .align_child(Center, Center)
-        .child(Text::new(LOGO).size(22.0).font(fonts::NERD).color(theme.accent));
+        .child(
+            Text::new(distro_logo())
+                .size(20.0)
+                .font(fonts::NERD)
+                .tight()
+                .color(theme.accent),
+        );
 
     let settings = Settings::read();
 

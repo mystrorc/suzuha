@@ -42,7 +42,7 @@ pub fn build(page: &mut Page) {
 
     page.end_group();
 
-    switch::add(page, "bar_logo", "NixOS logo", "Show the power-menu launcher");
+    switch::add(page, "bar_logo", "Distro logo", "Show the power-menu launcher");
     switch::add(page, "bar_workspaces", "Workspaces", "Show the workspace indicator");
     switch::add(page, "bar_workspace_name", "Workspace name", "Show the active workspace label");
     switch::add(page, "bar_audio", "Audio controls", "Show output and microphone rings");
