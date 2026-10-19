@@ -7,7 +7,7 @@ mod floating;
 mod input;
 mod integrations;
 mod launcher;
-mod plugins;
+pub mod monitors;
 mod user;
 mod wallpaper;
 mod weather;
@@ -21,6 +21,7 @@ use super::page::Page;
 pub fn build(shown: Shown, page: &mut Page) {
     match shown {
         Shown::User => user::build(page),
+        Shown::Monitors => monitors::build(page),
         Shown::Appearance => appearance::build(page),
         Shown::Input => input::build(page),
         Shown::Colors => colors::build(page),
@@ -31,7 +32,6 @@ pub fn build(shown: Shown, page: &mut Page) {
         Shown::Floating => floating::build(page),
         Shown::Weather => weather::build(page),
         Shown::Integrations => integrations::build(page),
-        Shown::Plugins => plugins::build(page),
         Shown::About => about::build(page),
     }
 }

@@ -70,12 +70,13 @@ impl Layout {
     }
 }
 
-const SETTINGS_ICON: &str = "󰒓";
+const SETTINGS_ICON: &str = "󱒓";
 const CLOSE_ICON: &str = "󰅖";
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Page {
     User,
+    Monitors,
     Appearance,
     Input,
     Colors,
@@ -86,14 +87,19 @@ pub enum Page {
     Floating,
     Weather,
     Integrations,
-    Plugins,
     About,
 }
 
 // every page in the list's order, with its icon, label and the line under its title
 const PAGES: [(Page, &str, &str, &str); 13] = [
     (Page::User, "󰍹", "System info", "System specifications and user profile configuration."),
-    (Page::Appearance, "󰍹", "Appearance", "Tune the shell's surfaces, blur, and login screen."),
+    (
+        Page::Monitors,
+        "󰶐",
+        "Monitor layout",
+        "Arrange connected displays, resolution, refresh rate, and scaling.",
+    ),
+    (Page::Appearance, "󰔎", "Appearance", "Tune the shell's surfaces, blur, and login screen."),
     (Page::Input, "󰌌", "Input", "Configure keyboard layouts, touchpad behaviors, mice, and trackball settings."),
     (
         Page::Colors,
@@ -121,19 +127,19 @@ const PAGES: [(Page, &str, &str, &str); 13] = [
     ),
     (
         Page::Behavior,
-        "󰒓",
+        "󱒓",
         "Behavior",
         "Change dismissal rules, launcher behavior, and global motion preferences.",
     ),
     (
         Page::Floating,
-        "󰖲",
+        "󱗲",
         "Floating widgets",
         "Control desktop-only visibility, placement, scale, opacity, and cards.",
     ),
     (
         Page::Weather,
-        "󰖐",
+        "󱖐",
         "Weather",
         "Choose where the weather comes from and how it reads.",
     ),
@@ -142,12 +148,6 @@ const PAGES: [(Page, &str, &str, &str); 13] = [
         "󰌹",
         "Integrations",
         "Keep supported applications in sync with the current shell palette.",
-    ),
-    (
-        Page::Plugins,
-        "󰐱",
-        "Plugins",
-        "Manage converted Omarchy plugins, panel flyouts, and Equalizer audio controls.",
     ),
     (Page::About, "󰋼", "About", "Inspect the running setup or reset settings."),
 ];
@@ -407,6 +407,8 @@ fn close() {
 pub fn open() {
     // a window closed from its title bar can leave a draft behind
     Settings::discard();
+
+    pages::monitors::reload();
 
     let typed_name = String::from(Profile::read().typed_name());
 

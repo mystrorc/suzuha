@@ -25,9 +25,7 @@ use lock_screen::Logind;
 use wallpaper::{Shuffle, Wallpaper};
 
 fn ipc_monitor_layout(_arguments: &[String]) -> String {
-    let _ = std::process::Command::new("python3")
-        .arg("/home/rcrout/.config/amane/plugins/monitor-layout/monitor_layout.py")
-        .spawn();
+    settings::open_on(settings::Page::Monitors);
     String::from("ok")
 }
 
