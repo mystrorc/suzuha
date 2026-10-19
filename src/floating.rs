@@ -50,8 +50,6 @@ const LEAF: &str = "\u{f032a}";
  * where the desktop is actually seen
  */
 pub fn view(monitor: &Monitor) -> LayerWindow {
-    let theme = theme::current();
-
     let width = monitor.width as f32;
     let height = monitor.height as f32 - bar::reserved();
 
@@ -75,22 +73,6 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
 
     drop(settings);
 
-    let mut cards = cards(&theme);
-
-    let mut names: Vec<Name> = cards.iter().map(|(name, _)| *name).collect();
-
-    names.push(Name::Clock);
-
-    // nothing shows until the cards know their spots, so they fade in where they stay
-    let Some(spots) = spots(&theme, &monitor.name, &names, width, height, scale) else {
-        return LayerWindow::new()
-            .width(Full)
-            .height(Full)
-            .layer(Layer::Bottom)
-            .namespace("floating-widgets")
-            .visible(false);
-    };
-
     // at startup the cards wait for the wallpaper to finish rising
     let risen = Wallpaper::read().risen;
 
@@ -98,6 +80,34 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
     let target = if wanted && risen { 1.0 } else { 0.0 };
 
     let shown = motion::appear(&format!("floating:{}", monitor.name), target, DEFAULT_SPATIAL);
+
+    if !wanted && shown <= 0.001 {
+        return LayerWindow::new()
+            .width(Full)
+            .height(Full)
+            .layer(Layer::Bottom)
+            .namespace("floating-widgets")
+            .visible(false);
+    }
+
+    let theme = theme::current();
+    let target_theme = theme::target();
+
+    let mut cards = cards(&theme);
+
+    let mut names: Vec<Name> = cards.iter().map(|(name, _)| *name).collect();
+
+    names.push(Name::Clock);
+
+    // nothing shows until the cards know their spots, so they fade in where they stay
+    let Some(spots) = spots(&target_theme, &monitor.name, &names, width, height, scale) else {
+        return LayerWindow::new()
+            .width(Full)
+            .height(Full)
+            .layer(Layer::Bottom)
+            .namespace("floating-widgets")
+            .visible(false);
+    };
 
     // the clock's text leans toward the screen edge it sits nearest, so it never floats off it
     let clock_center = spots[&Name::Clock].0 + CLOCK_WIDTH * scale / 2.0;
@@ -469,4 +479,3 @@ fn clock(theme: &Theme, on_left: bool) -> Rectangle {
         .align_child(side, End)
         .child(Column::new(children![time, date]).align(side).gap(0.0))
 }
-

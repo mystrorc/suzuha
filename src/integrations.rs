@@ -12,6 +12,8 @@ mod zed;
 use std::env;
 use std::fs;
 use std::path::Path;
+use std::sync::{LazyLock, Mutex};
+use std::thread;
 
 use amane::{Color, Service};
 
@@ -32,60 +34,46 @@ const PROGRAMS: [(&str, fn(&Theme)); 10] = [
     ("integration_zed", zed::export),
 ];
 
+static LAST_WRITTEN: LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new(String::new()));
+
 /*
  * looks at the theme once a second and writes the colors out to every
  * program turned on in the settings, only when the colors or the programs
  * changed; it runs on its own thread, so drawing never waits on the files
  */
 #[derive(Default)]
-pub struct Export {
-    // the colors and programs written last, so an unchanged theme writes nothing
-    written: String,
-}
+pub struct Export;
 
 impl Service for Export {
     fn new() -> Self {
-        Self::default()
+        Self
     }
 
     // nothing a window shows changes here
     fn update(&mut self) -> bool {
-        let theme = theme::current();
-
-        let settings = Settings::read();
-
-        let mut turned_on = Vec::new();
-
-        for (key, export) in PROGRAMS {
-            if settings.flag(key) {
-                turned_on.push((key, export));
-            }
-        }
-
-        drop(settings);
-
-        let mut fingerprint = fingerprint(&theme);
-
-        for (key, _) in &turned_on {
-            fingerprint.push_str(key);
-        }
-
-        if fingerprint == self.written {
+        // Defer writing external app themes while the wallpaper reveal animation is playing
+        // so running apps (GTK, COSMIC, Flux, Zed) don't spike CPU re-parsing themes mid-transition
+        if crate::wallpaper::is_transitioning() {
             return false;
         }
 
-        self.written = fingerprint;
-
-        for (_, export) in turned_on {
-            export(&theme);
-        }
+        run_export_if_changed();
 
         false
     }
 }
 
 pub fn export_now() {
-    let theme = theme::current();
+    thread::spawn(|| {
+        if !crate::wallpaper::is_transitioning() {
+            run_export_if_changed();
+        }
+    });
+}
+
+fn run_export_if_changed() {
+    let theme = theme::target();
+
     let settings = Settings::read();
 
     let mut turned_on = Vec::new();
@@ -97,6 +85,20 @@ pub fn export_now() {
     }
 
     drop(settings);
+
+    let mut fp = fingerprint(&theme);
+
+    for (key, _) in &turned_on {
+        fp.push_str(key);
+    }
+
+    {
+        let mut written = LAST_WRITTEN.lock().unwrap_or_else(|e| e.into_inner());
+        if *written == fp {
+            return;
+        }
+        *written = fp;
+    }
 
     for (_, export) in turned_on {
         export(&theme);

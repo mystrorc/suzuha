@@ -8,6 +8,14 @@ use super::FRAME_RADIUS;
  * stays where the old one is while only the circle grows
  */
 pub fn view(path: &str, center: (f32, f32), progress: f32, width: f32, height: f32) -> Rectangle {
+    if progress >= 0.998 {
+        return Rectangle::new()
+            .width(width)
+            .height(height)
+            .radius(FRAME_RADIUS)
+            .fill(Image::cover(path));
+    }
+
     let (x, y) = center;
 
     // far enough to reach the farthest corner, and a little past it
@@ -16,7 +24,7 @@ pub fn view(path: &str, center: (f32, f32), progress: f32, width: f32, height: f
 
     let covering = f32::hypot(farthest_x, farthest_y) + 2.0;
 
-    let radius = covering * progress;
+    let radius = (covering * progress).max(1.0);
 
     let picture = Rectangle::new()
         .width(width)

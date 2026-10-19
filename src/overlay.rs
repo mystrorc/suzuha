@@ -43,9 +43,22 @@ pub struct PanelView {
  * window takes a round trip with the compositor, long enough to miss an opening
  */
 pub fn view(monitor: &Monitor) -> LayerWindow {
-    let theme = theme::current();
-
     let overlay = Overlay::read();
+
+    let any_panel_open = overlay.power_menu.shown
+        || overlay.launcher.shown
+        || overlay.control_center.shown
+        || overlay.audio_control.shown
+        || overlay.sysmon.shown
+        || overlay.power_devices.shown
+        || overlay.utility.shown;
+
+    // Only subscribe the overlay window to animated theme frames when a panel is actually shown
+    let theme = if any_panel_open {
+        theme::current()
+    } else {
+        theme::target()
+    };
 
     // the area below the bar, which a window that respects the bar is placed in
     let screen = Region {

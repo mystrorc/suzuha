@@ -30,6 +30,16 @@ const LOAD_POLL: Duration = Duration::from_millis(16);
 pub static DRAWN: AtomicBool = AtomicBool::new(false);
 
 /*
+ * true while a wallpaper transition is preparing or playing, so background
+ * app theme exports wait until the animation finishes instead of spiking CPU
+ */
+pub static TRANSITIONING: AtomicBool = AtomicBool::new(false);
+
+pub fn is_transitioning() -> bool {
+    TRANSITIONING.load(Ordering::Relaxed)
+}
+
+/*
  * the chosen wallpaper and the one on screen: a new choice waits until
  * its file is decoded, then grows over the old one as a circle
  */
@@ -59,7 +69,9 @@ impl Service for Wallpaper {
     fn new() -> Self {
         let path = read_selection();
 
-        Palette::write().open(&path, PALETTE_SIZE);
+        let mut palette = Palette::default();
+        palette.open(&path, PALETTE_SIZE);
+        *Palette::write() = palette;
 
         Self {
             shown: path.clone(),
@@ -86,15 +98,24 @@ impl Service for Wallpaper {
                 continue;
             }
 
-            // with following turned off the colors stay those of an earlier wallpaper
-            if Settings::read().flag("follow_wallpaper") {
-                Palette::write().open(&path, PALETTE_SIZE);
-                crate::integrations::export_now();
-            }
+            TRANSITIONING.store(true, Ordering::Relaxed);
 
             Self::write().path = path.clone();
 
+            // Wait until the background image worker has finished decoding the texture
+            // while the wallpaper picker smoothly fades out
+            wait_until_loaded(&path);
+
+            // Extract the new palette off-lock so the UI render thread never stalls
+            if Settings::read().flag("follow_wallpaper") {
+                let mut next_palette = Palette::default();
+                next_palette.open(&path, PALETTE_SIZE);
+                *Palette::write() = next_palette;
+            }
+
             reveal(path);
+
+            TRANSITIONING.store(false, Ordering::Relaxed);
         }
     }
 }
@@ -119,8 +140,6 @@ fn play_intro() {
 
 // the new wallpaper grows or fades in over the old one, which is replaced once it is covered
 fn reveal(path: String) {
-    wait_until_loaded(&path);
-
     let settings = Settings::read();
 
     let instant = settings.text("wallpaper_transition") == "instant";
@@ -134,13 +153,24 @@ fn reveal(path: String) {
         return;
     }
 
+    let center = (random_share(), random_share());
+
+    // Stage incoming at a tiny non-zero reveal value for one frame so the GPU uploads
+    // the texture and mipmaps before the timed reveal glide starts ticking
     {
         let mut wallpaper = Wallpaper::write();
 
         wallpaper.incoming = Some(path.clone());
-        wallpaper.center = (random_share(), random_share());
-        wallpaper.reveal = motion::spatial(0.0, duration);
+        wallpaper.center = center;
+        wallpaper.reveal = motion::spatial(0.001, duration);
+    }
 
+    thread::sleep(Duration::from_millis(24));
+
+    {
+        let mut wallpaper = Wallpaper::write();
+
+        wallpaper.reveal = motion::spatial(0.001, duration);
         wallpaper.reveal.to(1.0);
     }
 
@@ -160,11 +190,11 @@ fn wait_until_loaded(path: &str) {
     }
 }
 
-// std seeds every RandomState differently, which is all the randomness this needs
+// keeps the reveal origin within the middle 35%..65% of the screen for a smoother expansion
 pub fn random_share() -> f32 {
     let random = RandomState::new().hash_one(0);
 
-    (random % 1000) as f32 / 1000.0
+    0.35 + (random % 300) as f32 / 1000.0
 }
 
 fn selection_file() -> String {

@@ -51,14 +51,21 @@ impl Service for Placement {
             let locked = !placed.is_empty() && Settings::read().flag("floating_lock_placement");
 
             if path != placed && !locked {
-                let analysis = analyse(&path);
-
-                // the cards move once the new wallpaper has finished coming in
-                while Wallpaper::read().shown != path && Wallpaper::read().path == path {
+                // Wait until the new wallpaper has finished its transition before running
+                // ImageMagick so decoding doesn't compete with the reveal animation
+                while (Wallpaper::read().shown != path || crate::wallpaper::is_transitioning())
+                    && Wallpaper::read().path == path
+                {
                     thread::sleep(SETTLE);
                 }
 
                 // another wallpaper was picked meanwhile, so this reading is already stale
+                if Wallpaper::read().path != path {
+                    continue;
+                }
+
+                let analysis = analyse(&path);
+
                 if Wallpaper::read().path != path {
                     continue;
                 }
@@ -121,7 +128,7 @@ fn analyse(path: &str) -> Option<Analysis> {
     let size = format!("{SAMPLE}x{SAMPLE}");
 
     let output = Command::new("magick")
-        .args([path, "-auto-orient", "-resize", &size, "-colorspace", "sRGB", "-depth", "8", "ppm:-"])
+        .args(["-limit", "thread", "2", path, "-auto-orient", "-resize", &size, "-colorspace", "sRGB", "-depth", "8", "ppm:-"])
         .output()
         .ok()?;
 

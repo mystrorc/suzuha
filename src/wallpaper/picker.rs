@@ -15,11 +15,11 @@ use crate::theme;
 
 pub use state::{Picker, list_folder};
 
-// the band\x27s height, leaving at least this much of the screen above and below
+// the band's height, leaving at least this much of the screen above and below
 const HEIGHT: f32 = 380.0;
 const SCREEN_GAP: f32 = 72.0;
 
-// the cards\x27 largest size, and how much of the band\x27s width one may take
+// the cards' largest size, and how much of the band's width one may take
 const CARD_WIDTH: f32 = 360.0;
 const CARD_HEIGHT: f32 = 240.0;
 const CARD_SHARE: f32 = 0.34;
@@ -37,18 +37,29 @@ const TINT: f32 = 0.48;
  * cards sliding along it; above everything, and only open while shown
  */
 pub fn view(monitor: &Monitor) -> LayerWindow {
-    let theme = theme::current();
-
     let picker = Picker::read();
+
+    let opacity = picker.opacity.value();
+
+    let visible = picker.shown || opacity > 0.001;
+
+    if !visible {
+        return LayerWindow::new()
+            .width(Full)
+            .height(Full)
+            .layer(Layer::Overlay)
+            .space(Zone::Ignore)
+            .keyboard(Keyboard::None)
+            .namespace("wallpaper-picker")
+            .visible(false);
+    }
+
+    let theme = theme::current();
 
     let screen_width = monitor.width as f32;
     let screen_height = monitor.height as f32;
 
     let height = f32::min(HEIGHT, screen_height - SCREEN_GAP);
-
-    let opacity = picker.opacity.value();
-
-    let visible = picker.shown || opacity > 0.0;
 
     let keyboard = if picker.shown {
         Keyboard::Exclusive
@@ -78,7 +89,7 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
     let content: Box<dyn Widget> = if picker.files.is_empty() {
         Box::new(empty(&theme))
     } else {
-        Box::new(carousel(&picker, screen_width, height))
+        Box::new(carousel(&picker, &theme, screen_width, height))
     };
 
     let band = Stack::new(vec![Box::new(backdrop), Box::new(tint), content])
@@ -126,7 +137,7 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
  * sides, cards are spread evenly along it, and each gets smaller and
  * darker the further it is from the middle; the list wraps around
  */
-fn carousel(picker: &Picker, width: f32, height: f32) -> Stack {
+fn carousel(picker: &Picker, theme: &theme::Theme, width: f32, height: f32) -> Stack {
     let count = picker.files.len() as f32;
 
     let inside = width - MARGIN * 2.0;
@@ -183,7 +194,6 @@ fn carousel(picker: &Picker, width: f32, height: f32) -> Stack {
     }
 
     // Add navigation chevrons on the sides of the band
-    let theme = theme::current();
     let btn_bg = Color::rgba(theme.surface.red(), theme.surface.green(), theme.surface.blue(), 200);
 
     let left_btn = Rectangle::new()

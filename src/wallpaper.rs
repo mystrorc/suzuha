@@ -17,7 +17,7 @@ use crate::theme;
 
 pub use blurred::blurred;
 pub use shuffle::Shuffle;
-pub use state::{Wallpaper, choose};
+pub use state::{Wallpaper, choose, is_transitioning};
 
 // Square screen corners (no dark rounded corners at the top-left/top-right of the screen)
 const FRAME_RADIUS: f32 = 0.0;

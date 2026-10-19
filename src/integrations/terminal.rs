@@ -206,7 +206,8 @@ fn foot_config(theme: &Theme, colors: &Colors) -> String {
 // every kitty listens on a socket named after its pid
 fn reload_kitty(path: &str) {
     let script = format!(
-        "for pid in $(pgrep -f '^kitty( |$)'); do \
+        "pgrep -x kitty >/dev/null 2>&1 || exit 0; \
+         for pid in $(pgrep -x kitty); do \
          kitty @ --to unix:@amane-kitty-$pid set-colors --all --configured '{path}'; \
          done 2>/dev/null"
     );
@@ -238,8 +239,10 @@ fn recolor_foot(theme: &Theme, colors: &Colors, folder: &str) {
 
     let signal = if theme.light { "-USR2" } else { "-USR1" };
 
+    // Only scan /proc if foot is actually running
     let script = format!(
-        "pkill {signal} -x foot 2>/dev/null; sleep 0.05; seen=' '; \
+        "pgrep -x foot >/dev/null 2>&1 || exit 0; \
+         pkill {signal} -x foot 2>/dev/null; sleep 0.05; seen=' '; \
          for environment in /proc/[0-9]*/environ; do \
          if tr '\\0' '\\n' 2>/dev/null < \"$environment\" | grep -qx 'TERM=foot'; then \
          process=${{environment%/environ}}; tty=$(readlink \"$process/fd/1\" 2>/dev/null); \

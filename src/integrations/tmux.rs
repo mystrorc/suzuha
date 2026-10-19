@@ -38,5 +38,5 @@ pub fn export(theme: &Theme) {
     write(&path, &(lines.join("\n") + "\n"));
 
     // no server running is fine, the next one sources the file from its config
-    let _ = amane::output(&format!("tmux source-file '{path}' 2>/dev/null"));
+    amane::spawn(&format!("pgrep -x tmux >/dev/null 2>&1 && tmux source-file '{path}' 2>/dev/null"));
 }

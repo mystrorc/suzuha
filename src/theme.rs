@@ -2,11 +2,15 @@ pub mod hsl;
 mod mode;
 mod scheme;
 
+use std::cell::RefCell;
+use std::time::{Duration, Instant};
+
 use amane::{Color, Palette, Service};
 
 use hsl::Hsl;
 use scheme::Scheme;
 
+use crate::motion;
 use crate::settings::Settings;
 
 pub use mode::Mode;
@@ -18,7 +22,11 @@ const MAX_SATURATION: f32 = 0.82;
 const SUCCESS_SEED: Color = Color::rgb(0xa6, 0xe3, 0xa1);
 const DANGER_SEED: Color = Color::rgb(0xf3, 0x8b, 0xa8);
 
+// how long the shell's colors take to glide to a new wallpaper's palette
+const THEME_TRANSITION_MS: u64 = 550;
+
 // the colors every component draws with, rebuilt from the wallpaper each frame
+#[derive(Clone, Copy, PartialEq)]
 pub struct Theme {
     pub light: bool,
 
@@ -46,28 +54,105 @@ struct Tuning {
     contrast: f32,
 }
 
-// every color is the wallpaper's darkest or most vivid color, re-lit, unless a fixed scheme is picked
-pub fn current() -> Theme {
-    let light = Mode::light();
+#[derive(Clone, PartialEq)]
+struct CacheKey {
+    forced: Option<bool>,
+    scheme_name: String,
+    saturation_bits: u32,
+    contrast_bits: u32,
+    manual_accent: Option<Color>,
+    palette_light: bool,
+    base: Color,
+    seed: Color,
+}
 
-    for_mode(light)
+struct AnimatedTheme {
+    from: Theme,
+    target: Theme,
+    started: Instant,
+}
+
+impl AnimatedTheme {
+    fn new(initial: Theme) -> Self {
+        Self {
+            from: initial,
+            target: initial,
+            started: Instant::now() - Duration::from_secs(10),
+        }
+    }
+
+    fn progress(&self, now: Instant) -> f32 {
+        if motion::reduced() {
+            return 1.0;
+        }
+
+        let total = Duration::from_millis(THEME_TRANSITION_MS)
+            .div_f32(motion::speed())
+            .as_secs_f32();
+
+        if total <= 0.0 {
+            return 1.0;
+        }
+
+        let elapsed = now.saturating_duration_since(self.started).as_secs_f32();
+
+        (elapsed / total).clamp(0.0, 1.0)
+    }
+
+    fn current(&self, now: Instant) -> Theme {
+        let t = self.progress(now);
+
+        if t >= 1.0 {
+            return self.target;
+        }
+
+        // smooth cubic ease-out so the color shift starts responsively and settles gently
+        let eased = 1.0 - (1.0 - t).powi(3);
+
+        blend_theme(&self.from, &self.target, eased)
+    }
+}
+
+thread_local! {
+    static TARGET_CACHE: RefCell<Option<(CacheKey, Theme)>> = const { RefCell::new(None) };
+    static ANIMATED: RefCell<Option<AnimatedTheme>> = const { RefCell::new(None) };
+}
+
+// every color is the wallpaper's darkest or most vivid color, re-lit, unless a fixed scheme is picked;
+// glides smoothly across frames when the palette or scheme changes
+pub fn current() -> Theme {
+    let next = target();
+    let now = Instant::now();
+
+    ANIMATED.with_borrow_mut(|slot| {
+        let state = slot.get_or_insert_with(|| AnimatedTheme::new(next));
+
+        if state.target != next {
+            state.from = state.current(now);
+            state.target = next;
+            state.started = now;
+        }
+
+        if state.progress(now) < 1.0 {
+            amane::request_frame();
+        }
+
+        state.current(now)
+    })
+}
+
+// the un-animated target theme, used by external integrations and layout calculations
+pub fn target() -> Theme {
+    for_mode(Mode::light())
 }
 
 // the theme as it would be in light or dark, none to decide from the wallpaper
 pub fn for_mode(forced: Option<bool>) -> Theme {
     let settings = Settings::read();
 
-    let scheme_name = settings.text("scheme");
-    if scheme_name != "dynamic" && !scheme_name.is_empty() {
-        if let Some(scheme) = scheme::find(scheme_name) {
-            return fixed(scheme);
-        }
-    }
-
-    let tuning = Tuning {
-        saturation: settings.number("saturation"),
-        contrast: settings.number("contrast"),
-    };
+    let scheme_name = String::from(settings.text("scheme"));
+    let saturation = settings.number("saturation");
+    let contrast = settings.number("contrast");
 
     // a hand-picked accent replaces the wallpaper's
     let manual_accent = if settings.flag("manual_accent") {
@@ -79,12 +164,45 @@ pub fn for_mode(forced: Option<bool>) -> Theme {
     drop(settings);
 
     let palette = Palette::read();
-
-    // a choice made by hand wins, otherwise a bright wallpaper gets a light theme
-    let light = forced.unwrap_or(palette.light());
-
+    let palette_light = palette.light();
     let base = palette.background();
     let seed = manual_accent.unwrap_or(palette.accent());
+    drop(palette);
+
+    let key = CacheKey {
+        forced,
+        scheme_name: scheme_name.clone(),
+        saturation_bits: saturation.to_bits(),
+        contrast_bits: contrast.to_bits(),
+        manual_accent,
+        palette_light,
+        base,
+        seed,
+    };
+
+    if let Some(cached) = TARGET_CACHE.with_borrow(|cache| {
+        cache
+            .as_ref()
+            .and_then(|(k, theme)| if *k == key { Some(*theme) } else { None })
+    }) {
+        return cached;
+    }
+
+    if scheme_name != "dynamic" && !scheme_name.is_empty() {
+        if let Some(scheme) = scheme::find(&scheme_name) {
+            let computed = fixed(scheme);
+            TARGET_CACHE.with_borrow_mut(|cache| *cache = Some((key, computed)));
+            return computed;
+        }
+    }
+
+    let tuning = Tuning {
+        saturation,
+        contrast,
+    };
+
+    // a choice made by hand wins, otherwise a bright wallpaper gets a light theme
+    let light = forced.unwrap_or(palette_light);
 
     let seed_saturation = hsl::from_color(seed).saturation;
 
@@ -125,7 +243,7 @@ pub fn for_mode(forced: Option<bool>) -> Theme {
         tone(base, 0.96, 0.08)
     };
 
-    Theme {
+    let computed = Theme {
         light,
         background,
         surface,
@@ -140,6 +258,29 @@ pub fn for_mode(forced: Option<bool>) -> Theme {
         on_accent,
         success,
         danger,
+    };
+
+    TARGET_CACHE.with_borrow_mut(|cache| *cache = Some((key, computed)));
+
+    computed
+}
+
+fn blend_theme(from: &Theme, to: &Theme, amount: f32) -> Theme {
+    Theme {
+        light: to.light,
+        background: mix(from.background, to.background, amount),
+        surface: mix(from.surface, to.surface, amount),
+        hover_surface: mix(from.hover_surface, to.hover_surface, amount),
+        selected_surface: mix(from.selected_surface, to.selected_surface, amount),
+        border: mix(from.border, to.border, amount),
+        text: mix(from.text, to.text, amount),
+        secondary_text: mix(from.secondary_text, to.secondary_text, amount),
+        muted_text: mix(from.muted_text, to.muted_text, amount),
+        accent: mix(from.accent, to.accent, amount),
+        accent_hover: mix(from.accent_hover, to.accent_hover, amount),
+        on_accent: mix(from.on_accent, to.on_accent, amount),
+        success: mix(from.success, to.success, amount),
+        danger: mix(from.danger, to.danger, amount),
     }
 }
 
