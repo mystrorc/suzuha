@@ -261,7 +261,7 @@ pub fn export(theme: &Theme) {
     }
 
     write(
-        &format!("{cosmic_dir}/settings-manager-theme.ron"),
+        &format!("{cosmic_dir}/amane-theme.ron"),
         &format!("(\n    name: \"Amane Dynamic\",\n    accent: \"{}\",\n)\n", hex(theme.accent)),
     );
 

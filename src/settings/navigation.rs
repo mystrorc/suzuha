@@ -7,10 +7,10 @@ use crate::theme::Theme;
 
 pub const WIDTH: f32 = 218.0;
 
-const ITEM_HEIGHT: f32 = 38.0;
+const ITEM_HEIGHT: f32 = 34.0;
 const ITEM_GAP: f32 = 2.0;
 
-const TOP: f32 = 12.0;
+const TOP: f32 = 10.0;
 const SIDE: f32 = 10.0;
 
 // the list of pages, with the selection sliding up and down behind it
@@ -78,13 +78,13 @@ fn item(theme: &Theme, page: Page, icon: &str, label: &str, current: bool, width
     };
 
     let icon = Rectangle::new()
-        .width(24.0)
-        .height(24.0)
+        .width(22.0)
+        .height(22.0)
         .align_child(Center, Center)
-        .child(Text::new(icon).size(15.0).font(fonts::NERD).tight().color(icon_color));
+        .child(Text::new(icon).size(14.0).font(fonts::NERD).tight().color(icon_color));
 
     let label = Text::new(label)
-        .size(13.0)
+        .size(12.5)
         .font(fonts::BODY)
         .weight(weight)
         .color(text_color)
@@ -101,11 +101,11 @@ fn item(theme: &Theme, page: Page, icon: &str, label: &str, current: bool, width
         .align_child(Start, Center)
         .padding(Padding {
             top: 0.0,
-            right: 12.0,
+            right: 10.0,
             bottom: 0.0,
             left: 10.0,
         })
-        .child(Row::new(children![icon, label]).gap(10.0).align(Center))
+        .child(Row::new(children![icon, label]).gap(9.0).align(Center))
 }
 
 fn select(page: Page) {

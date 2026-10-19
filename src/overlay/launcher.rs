@@ -1,6 +1,7 @@
 mod results;
 
 use std::cell::{Cell, RefCell};
+use std::collections::HashMap;
 
 use amane::{
     Apps, Center, Column, Image, Key, Padding, Parent, Pointer, Rectangle, Row, Scroll, Service,
@@ -56,13 +57,14 @@ thread_local! {
     /*
      * the panel's height springs toward what the results need; kept outside
      * the service because the view sets its target, and a service write
-     * from the view would draw frames forever
+     * from the view would draw frames forever.
+     * Stored per monitor so displays with different heights never fight over the spring target.
      */
-    static HEIGHT: RefCell<Option<Spring>> = const { RefCell::new(None) };
+    static HEIGHTS: RefCell<HashMap<String, Spring>> = RefCell::new(HashMap::new());
 }
 
 // none while fully hidden
-pub fn view(overlay: &Overlay, theme: &Theme, screen: Region) -> Option<PanelView> {
+pub fn view(overlay: &Overlay, theme: &Theme, screen: Region, monitor_name: &str) -> Option<PanelView> {
     let progress = overlay.launcher.progress.value();
 
     if progress <= 0.001 {
@@ -78,7 +80,8 @@ pub fn view(overlay: &Overlay, theme: &Theme, screen: Region) -> Option<PanelVie
 
     ROWS_SHOWN.set(rows);
 
-    let height = follow_height(FIXED_HEIGHT + rows as f32 * ROW_HEIGHT);
+    let target_height = FIXED_HEIGHT + rows as f32 * ROW_HEIGHT;
+    let height = follow_height(monitor_name, target_height, progress <= 0.05);
 
     let hidden = height + HIDDEN_MARGIN;
 
@@ -112,13 +115,19 @@ pub fn view(overlay: &Overlay, theme: &Theme, screen: Region) -> Option<PanelVie
     Some(PanelView { blob, input, reach })
 }
 
-fn follow_height(target: f32) -> f32 {
-    HEIGHT.with_borrow_mut(|height| {
-        let spring = height.get_or_insert_with(|| motion::size(target));
+fn follow_height(monitor_name: &str, target: f32, snap: bool) -> f32 {
+    HEIGHTS.with_borrow_mut(|heights| {
+        let spring = heights
+            .entry(monitor_name.to_string())
+            .or_insert_with(|| motion::size(target));
 
-        spring.to(target);
-
-        spring.value()
+        if snap {
+            *spring = motion::size(target);
+            target
+        } else {
+            spring.to(target);
+            spring.value()
+        }
     })
 }
 
@@ -367,6 +376,14 @@ fn show(overlay: &mut Overlay) {
     overlay.control_center.hide();
     super::utility::close(overlay);
     overlay.launcher.show();
+
+    // Lock launcher display to the currently focused monitor
+    let focused_output = amane::Workspaces::read()
+        .list()
+        .iter()
+        .find(|w| w.focused())
+        .and_then(|w| w.output().map(String::from));
+    overlay.launcher_monitor = focused_output;
 
     // remembering keeps the last search, and the field still shows it
     if !Settings::read().flag("launcher_remember_query") {

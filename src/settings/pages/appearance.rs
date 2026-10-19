@@ -1,16 +1,7 @@
-use std::fs;
-use std::path::Path;
-use std::process::Command;
-
-use amane::Service;
-
-use super::super::button::{self, Style};
 use super::super::choice;
 use super::super::page::Page;
-use super::super::row;
 use super::super::slider::{self, Range};
 use super::super::switch;
-use super::super::Settings;
 
 pub const CURSORS: [(&str, &str); 10] = [
     ("Adwaita (Default)", "Adwaita"),
@@ -45,15 +36,6 @@ pub const FONTS: [(&str, &str); 10] = [
     ("DejaVu Sans", "DejaVu Sans"),
 ];
 
-pub const SDDM_THEMES: [(&str, &str); 7] = [
-    ("Sugar Dark", "sugar-dark"),
-    ("Sugar Candy", "sugar-candy"),
-    ("Astronaut", "sddm-astronaut-theme"),
-    ("Catppuccin Mocha Mauve", "catppuccin-mocha-mauve"),
-    ("Corners", "corners"),
-    ("Where Is My SDDM Theme", "where_is_my_sddm_theme"),
-    ("Sway Fedora (Default)", "03-sway-fedora"),
-];
 
 pub fn build(page: &mut Page) {
     // Window Appearance (Corners, Borders, Gaps, Shadows)
@@ -167,78 +149,4 @@ pub fn build(page: &mut Page) {
 
     page.end_group();
 
-    // Login Screen (SDDM Theme)
-    choice::add(
-        page,
-        "sddm_theme",
-        "Login screen theme",
-        "Display manager theme for SDDM login screen",
-        &SDDM_THEMES,
-    );
-
-    action(
-        page,
-        "Apply theme",
-        "Save and activate the selected theme for SDDM",
-        "Apply",
-        Style::Primary,
-        apply_sddm_theme,
-    );
-
-    action(
-        page,
-        "Preview in test mode",
-        "Launch SDDM greeter in test window without logging out",
-        "Preview",
-        Style::Plain,
-        preview_sddm_theme,
-    );
-
-    page.end_group();
-}
-
-fn action(
-    page: &mut Page,
-    title: &str,
-    detail: &str,
-    label: &str,
-    style: Style,
-    on_click: impl Fn() + 'static,
-) {
-    let control = button::view(page.theme, label, style, true, on_click);
-
-    let row = row::view(
-        page.theme,
-        page.width,
-        row::HEIGHT,
-        title,
-        detail,
-        control,
-        button::width(label),
-    );
-
-    page.row(row::HEIGHT, row);
-}
-
-fn apply_sddm_theme() {
-    let settings = Settings::read();
-    let theme_id = settings.staged("sddm_theme");
-    let content = format!("[Theme]\nCurrent={theme_id}\n");
-    let _ = fs::write("/etc/sddm.conf.d/10-theme.conf", content);
-}
-
-fn preview_sddm_theme() {
-    let settings = Settings::read();
-    let theme_id = settings.staged("sddm_theme");
-    let path = format!("/usr/share/sddm/themes/{theme_id}");
-    let greeter = if Path::new("/usr/bin/sddm-greeter-qt6").exists() {
-        "sddm-greeter-qt6"
-    } else {
-        "sddm-greeter"
-    };
-    let _ = Command::new(greeter)
-        .arg("--test-mode")
-        .arg("--theme")
-        .arg(path)
-        .spawn();
 }

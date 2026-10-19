@@ -37,8 +37,8 @@ pub fn export(theme: &Theme) {
     write(&foot, &foot_config(theme, &colors));
     write(&alacritty_state, &alacritty_cfg);
 
-    // Update active alacritty config: ~/.config/alacritty/settings-manager-colors.toml
-    let alacritty_conf = format!("{}/alacritty/settings-manager-colors.toml", config_home());
+    // Update active alacritty config: ~/.config/alacritty/amane-colors.toml
+    let alacritty_conf = format!("{}/alacritty/amane-colors.toml", config_home());
     write(&alacritty_conf, &alacritty_cfg);
 
     // Update termusic TUI config so it preserves terminal transparency ("Reset") and follows theme colors

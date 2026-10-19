@@ -141,7 +141,6 @@ pub fn export(theme: &Theme) {
     );
 
     write(&format!("{themes_dir}/amane.json"), &content);
-    write(&format!("{themes_dir}/settings-manager.json"), &content);
 
     // Update settings.json if needed to use "Amane Dynamic"
     let settings_path = format!("{zed_dir}/settings.json");

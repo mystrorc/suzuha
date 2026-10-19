@@ -84,7 +84,7 @@ pub fn export(theme: &Theme) {
 
 /*
  * In Niri's KDL parser, later blocks override earlier blocks. Ensure that
- * cursor.kdl, settings-manager.kdl, and amane-window.kdl are included at the
+ * cursor.kdl, amane.kdl, and amane-window.kdl are included at the
  * very bottom of config.kdl rather than the top so they override defaults.
  */
 fn ensure_includes_at_end(config_kdl: &str) -> bool {
@@ -94,7 +94,8 @@ fn ensure_includes_at_end(config_kdl: &str) -> bool {
 
     let managed = [
         "include \"cursor.kdl\"",
-        "include \"settings-manager.kdl\"",
+        "include \"amane.kdl\"",
+        "include \"amane.kdl\"",
         "include \"amane-window.kdl\"",
     ];
 
@@ -111,7 +112,7 @@ fn ensure_includes_at_end(config_kdl: &str) -> bool {
     }
 
     let mut updated = body.join("\n");
-    updated.push_str("\n\ninclude \"cursor.kdl\"\ninclude \"settings-manager.kdl\"\ninclude \"amane-window.kdl\"\n");
+    updated.push_str("\n\ninclude \"cursor.kdl\"\ninclude \"amane.kdl\"\ninclude \"amane-window.kdl\"\n");
 
     if updated != existing {
         write(config_kdl, &updated);

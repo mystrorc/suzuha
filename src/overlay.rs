@@ -45,8 +45,13 @@ pub struct PanelView {
 pub fn view(monitor: &Monitor) -> LayerWindow {
     let overlay = Overlay::read();
 
+    let show_launcher = match &overlay.launcher_monitor {
+        Some(name) => name == &monitor.name,
+        None => true,
+    };
+
     let any_panel_open = overlay.power_menu.shown
-        || overlay.launcher.shown
+        || (overlay.launcher.shown && show_launcher)
         || overlay.control_center.shown
         || overlay.audio_control.shown
         || overlay.sysmon.shown
@@ -74,8 +79,10 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
         panels.push(panel);
     }
 
-    if let Some(panel) = launcher::view(&overlay, &theme, screen) {
-        panels.push(panel);
+    if show_launcher {
+        if let Some(panel) = launcher::view(&overlay, &theme, screen, &monitor.name) {
+            panels.push(panel);
+        }
     }
 
     if let Some(panel) = control_center::view(&overlay, &theme, screen) {
@@ -110,7 +117,7 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
      * the launcher and a password field are typed into, so they take the
      * keyboard while open; the utility center takes it once clicked, for escape
      */
-    let keyboard = if overlay.launcher.shown || utility::wants_keyboard(&overlay) {
+    let keyboard = if (overlay.launcher.shown && show_launcher) || utility::wants_keyboard(&overlay) {
         Keyboard::Exclusive
     } else if overlay.utility.shown {
         Keyboard::OnDemand

@@ -79,6 +79,8 @@ pub enum Page {
     Monitors,
     Appearance,
     Input,
+    Audio,
+    DefaultApps,
     Colors,
     Launcher,
     Wallpaper,
@@ -91,7 +93,7 @@ pub enum Page {
 }
 
 // every page in the list's order, with its icon, label and the line under its title
-const PAGES: [(Page, &str, &str, &str); 13] = [
+const PAGES: [(Page, &str, &str, &str); 15] = [
     (Page::User, "󰍹", "System info", "System specifications and user profile configuration."),
     (
         Page::Monitors,
@@ -100,7 +102,19 @@ const PAGES: [(Page, &str, &str, &str); 13] = [
         "Arrange connected displays, resolution, refresh rate, and scaling.",
     ),
     (Page::Appearance, "󰔎", "Appearance", "Tune the shell's surfaces, blur, and login screen."),
-    (Page::Input, "󰌌", "Input", "Configure keyboard layouts, touchpad behaviors, mice, and trackball settings."),
+    (Page::Input, "󰌌", "Input", "Configure keyboard layouts, touchpad behaviors, mice, trackballs, and key remapping."),
+    (
+        Page::Audio,
+        "󰕾",
+        "Audio",
+        "Configure equalizer profiles, preamp gain, and real-time PipeWire DSP filters.",
+    ),
+    (
+        Page::DefaultApps,
+        "◫",
+        "Default apps",
+        "Manage preferred web browser, file manager, terminal emulator, and text editor.",
+    ),
     (
         Page::Colors,
         "󰏘",

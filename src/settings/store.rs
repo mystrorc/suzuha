@@ -7,7 +7,7 @@ use std::process::Command;
 use amane::Service;
 
 // every setting and the value it has until changed
-const DEFAULTS: [(&str, &str); 104] = [
+const DEFAULTS: [(&str, &str); 103] = [
     // appearance
     ("blur_strength", "1"),
     ("reduce_transparency", "false"),
@@ -20,8 +20,6 @@ const DEFAULTS: [(&str, &str); 104] = [
     ("window_inactive_border", "true"),
     ("window_gaps", "8"),
     ("window_shadows", "true"),
-    // login screen
-    ("sddm_theme", "sugar-dark"),
     // input - keyboard
     ("input_keyboard_layout", "us"),
     ("input_keyboard_repeat_rate", "25"),
@@ -177,15 +175,6 @@ impl Service for Settings {
             values.insert(String::from(key), String::from(value.trim()));
         }
 
-        // read SDDM active theme from /etc/sddm.conf.d/10-theme.conf if present
-        if let Ok(c) = fs::read_to_string("/etc/sddm.conf.d/10-theme.conf") {
-            for line in c.lines() {
-                if let Some(val) = line.trim().strip_prefix("Current=") {
-                    values.insert(String::from("sddm_theme"), String::from(val.trim()));
-                    break;
-                }
-            }
-        }
 
         // keys that are no longer settings are dropped
         for line in saved.lines() {
@@ -277,7 +266,6 @@ impl Settings {
         settings.save();
         apply_appearance(&settings);
         apply_input(&settings);
-        apply_sddm(&settings);
         drop(settings);
 
         crate::integrations::export_now();
@@ -291,7 +279,6 @@ impl Settings {
         settings.save();
         apply_appearance(&settings);
         apply_input(&settings);
-        apply_sddm(&settings);
         drop(settings);
 
         crate::integrations::export_now();
@@ -344,15 +331,10 @@ fn apply_appearance(settings: &Settings) {
     let _ = Command::new("sh").arg("-c").arg(cmd).spawn();
 }
 
-fn apply_sddm(settings: &Settings) {
-    let theme_id = settings.text("sddm_theme");
-    let content = format!("[Theme]\nCurrent={theme_id}\n");
-    let _ = fs::write("/etc/sddm.conf.d/10-theme.conf", content);
-}
 
 fn apply_input(settings: &Settings) {
     let home = env::var("HOME").unwrap_or_default();
-    let kdl_path = format!("{home}/.config/niri/settings-manager.kdl");
+    let kdl_path = format!("{home}/.config/niri/amane.kdl");
 
     let layout = settings.text("input_keyboard_layout");
     let repeat_rate = settings.text("input_keyboard_repeat_rate");

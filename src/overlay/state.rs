@@ -27,6 +27,7 @@ pub struct Overlay {
     pub control_tab: usize,
 
     pub launcher: Panel,
+    pub launcher_monitor: Option<String>,
 
     pub sysmon: Panel,
 
@@ -96,6 +97,7 @@ impl Service for Overlay {
             center_tab: 1,
             control_tab: 0,
             launcher: Panel::new(),
+            launcher_monitor: None,
             sysmon: Panel::new(),
             power_devices: Panel::new(),
             audio_control: Panel::new(),

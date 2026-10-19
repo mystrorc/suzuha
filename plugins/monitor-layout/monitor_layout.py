@@ -20,7 +20,7 @@ gi.require_version("Gdk", "4.0")
 from gi.repository import Gdk, Gio, GLib, Gtk  # noqa: E402
 
 
-NIRI_CONFIG = Path.home() / ".config/niri/settings-manager.kdl"
+NIRI_CONFIG = Path.home() / ".config/niri/amane.kdl"
 HYPR_CONFIG = Path.home() / ".config/hypr/monitors.lua"
 COMMON_SCALES = [1.0, 1.25, 1.5, 1.6, 1.75, 2.0, 2.5, 3.0]
 
@@ -725,7 +725,7 @@ class MonitorLayoutWindow(Gtk.ApplicationWindow):
         try:
             self.normalize()
             if is_niri():
-                # Write to settings-manager.kdl output section
+                # Write to amane.kdl output section
                 if NIRI_CONFIG.exists():
                     backup = NIRI_CONFIG.with_name(f"{NIRI_CONFIG.name}.bak.{int(time.time())}")
                     shutil.copy2(NIRI_CONFIG, backup)

@@ -22,14 +22,11 @@ This fork ([`mystrorc/suzuha`](https://github.com/mystrorc/suzuha)) tracks upstr
   - Replaced the basic User Info page with a comprehensive **System info (`󰍹`)** tab.
   - Displays a Hero System Card with the distribution logo, OS name, kernel release, dynamic system uptime, and CPU summary.
   - Includes right-aligned hardware specification rows for Operating System, Kernel Release, System Uptime, Installed Packages (`rpm`), Processor, Total Memory, and Graphics Adapter (`lspci`), positioned directly above the lock screen User Profile configuration.
-- **Login Screen (SDDM Theme) Management (`src/settings/pages/appearance.rs`):**
-  - Integrated SDDM theme selector (`Sugar Dark`, `Sugar Candy`, `Astronaut`, `Catppuccin Mocha Mauve`, `Corners`, `Where Is My SDDM Theme`, `Sway Fedora`) into the **Appearance** settings page.
-  - Includes one-click **Apply** (writing to `/etc/sddm.conf.d/10-theme.conf`) and **Preview in test mode** (`sddm-greeter-qt6 --test-mode`).
 - **Input & Per-Device Pointer Configuration (`src/settings/pages/input.rs`):**
   - Dedicated **Input (`󰌌`)** tab in Amane Settings for keyboard, touchpad, mouse, and trackball configuration.
   - **Keyboard:** Layout, repeat rate (chars/sec), and repeat delay (ms).
   - **Touchpad:** Natural scrolling, tap-to-click, and disable-while-typing toggles.
-  - **Per-Device Mouse & Trackball Controls:** Target pointing device selector (`Logitech G Pro (Mouse)`, `Logitech ERGO M575 (Trackball)`, and `All Mice (Global Default)`) with independent pointer speed sliders, flat acceleration toggles, left-handed mode, polling rate (`125Hz`–`1000Hz`), and hardware sensor DPI (`400`–`3200 DPI`) configured live via Niri (`~/.config/niri/settings-manager.kdl`) and `solaar`.
+  - **Per-Device Mouse & Trackball Controls:** Target pointing device selector (`Logitech G Pro (Mouse)`, `Logitech ERGO M575 (Trackball)`, and `All Mice (Global Default)`) with independent pointer speed sliders, flat acceleration toggles, left-handed mode, polling rate (`125Hz`–`1000Hz`), and hardware sensor DPI (`400`–`3200 DPI`) configured live via Niri (`~/.config/niri/amane.kdl`) and `solaar`.
 - **Ethernet Status & Toggle in Utility Panel (`src/overlay/utility/wifi.rs`):**
   - Added an **Ethernet (`󰈀`)** header section directly inside the Wi-Fi & Network utility flyout (`Eth (<interface>)`).
   - Automatically detects physical wired interfaces via `/sys/class/net`, displays live connection state (`Connected` / `Disconnected` / `Off`), and provides an interactive on/off switch powered by `nmcli`.
@@ -41,7 +38,7 @@ This fork ([`mystrorc/suzuha`](https://github.com/mystrorc/suzuha)) tracks upstr
 - **Shake to Find Cursor Service:**
   - Background cursor velocity and directional reversal detector providing cursor locating feedback.
 - **Dynamic Theming & Desktop Integrations:**
-  - **Alacritty Terminal:** Native configuration generation writing to `~/.config/alacritty/settings-manager-colors.toml` with instant inotify live reloading.
+  - **Alacritty Terminal:** Native configuration generation writing to `~/.config/alacritty/amane-colors.toml` with instant inotify live reloading.
   - **GTK 3 & GTK 4:** Dynamic CSS symlinks (`~/.config/gtk-3.0/gtk.css` and `~/.config/gtk-4.0/gtk.css`), color-scheme preference, and matching GNOME interface accent-color.
   - **Zed Editor:** Custom theme generation at `~/.config/zed/themes/amane.json` with dynamic syntax highlighting and UI token mapping.
   - **COSMIC & Iced Applications:**
@@ -152,7 +149,6 @@ These are only needed for their corresponding features:
 | `wf-recorder` | Screen recording (~5-12% CPU / 30-50MB RAM) |
 | `pactl` | Recording desktop sound and mic together |
 | `solaar` | Hardware DPI and polling rate configuration for Logitech mice/trackballs |
-| `sddm-greeter-qt6` | Live test-mode preview for SDDM login screen themes |
 
 ## IPC
 

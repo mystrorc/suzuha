@@ -5,7 +5,7 @@ use std::sync::{LazyLock, Mutex};
 use std::time::Instant;
 
 use amane::{
-    Center, Color, Column, Padding, Point, Pointer, Rectangle, Row, SpaceBetween, Stack, Start,
+    Center, Color, Column, Padding, Point, Pointer, Rectangle, Row, ScrollArea, SpaceBetween, Stack, Start,
     Text, Weight, Widget, children,
 };
 
@@ -41,7 +41,12 @@ impl Mode {
     }
 
     pub fn label(&self) -> String {
-        format!("{} × {} @ {:.0} Hz", self.width, self.height, self.refresh_hz())
+        let hz = self.refresh_hz();
+        if (hz - hz.round()).abs() < 0.05 {
+            format!("{} × {} @ {:.0} Hz", self.width, self.height, hz)
+        } else {
+            format!("{} × {} @ {:.2} Hz", self.width, self.height, hz)
+        }
     }
 }
 
@@ -350,8 +355,7 @@ pub fn build(page: &mut Page) {
         page.row(row::HEIGHT, mode_row);
 
         if mode_menu_open {
-            let mode_list = build_mode_list(theme, width, &mon);
-            let list_h = (mon.modes.len().min(6) as f32) * 34.0 + 16.0;
+            let (mode_list, list_h) = build_mode_list(theme, width, &mon);
             page.row(list_h, mode_list);
         }
 
@@ -740,11 +744,13 @@ fn build_mode_row(theme: &Theme, width: f32, mon: &OutputInfo, menu_open: bool) 
     )
 }
 
-fn build_mode_list(theme: &Theme, width: f32, mon: &OutputInfo) -> Rectangle {
+fn build_mode_list(theme: &Theme, width: f32, mon: &OutputInfo) -> (Rectangle, f32) {
     let cur_idx = mon.current_mode_index();
     let mut rows: Vec<Box<dyn Widget>> = Vec::new();
+    let content_w = width - 40.0;
+    let item_w = content_w - 4.0;
 
-    for (idx, mode) in mon.modes.iter().take(6).enumerate() {
+    for (idx, mode) in mon.modes.iter().enumerate() {
         let is_cur = idx == cur_idx;
         let hover_key = format!("mon-mode:{idx}");
         let fill = if is_cur {
@@ -755,8 +761,26 @@ fn build_mode_list(theme: &Theme, width: f32, mon: &OutputInfo) -> Rectangle {
             high_surface(theme)
         };
         let m = mode.clone();
+
+        let mut labels: Vec<Box<dyn Widget>> = vec![Box::new(
+            Text::new(mode.label())
+                .size(12.0)
+                .font(fonts::NERD)
+                .weight(if is_cur { Weight::SemiBold } else { Weight::Regular })
+                .color(if is_cur { theme.accent } else { theme.text }),
+        )];
+
+        if is_cur {
+            labels.push(Box::new(
+                Text::new("󰄬")
+                    .size(13.0)
+                    .font(fonts::NERD)
+                    .color(theme.accent),
+            ));
+        }
+
         let item = Rectangle::new()
-            .width(width - 40.0)
+            .width(item_w)
             .height(30.0)
             .radius(8.0)
             .fill(fill)
@@ -781,26 +805,39 @@ fn build_mode_list(theme: &Theme, width: f32, mon: &OutputInfo) -> Rectangle {
             })
             .align_child(Start, Center)
             .child(
-                Text::new(mode.label())
-                    .size(12.0)
-                    .font(fonts::NERD)
-                    .weight(if is_cur { Weight::SemiBold } else { Weight::Regular })
-                    .color(if is_cur { theme.accent } else { theme.text }),
+                Row::new(labels)
+                    .width(item_w - 24.0)
+                    .justify(SpaceBetween)
+                    .align(Center),
             );
         rows.push(Box::new(item));
     }
 
-    let list_h = (mon.modes.len().min(6) as f32) * 34.0 + 16.0;
-    Rectangle::new()
+    let total_modes = mon.modes.len();
+    let total_h = (total_modes as f32) * 34.0;
+    let list_viewport_h = total_h.min(260.0);
+    let col = Column::new(rows).gap(4.0);
+
+    let container = Rectangle::new()
         .width(width)
-        .height(list_h)
+        .height(list_viewport_h + 16.0)
         .padding(Padding {
             top: 8.0,
             right: 20.0,
             bottom: 8.0,
             left: 20.0,
-        })
-        .child(Column::new(rows).gap(4.0))
+        });
+
+    let result = if total_h > 260.0 {
+        let scroll = ScrollArea::new("mon-mode-scroll", col)
+            .width(content_w)
+            .height(list_viewport_h);
+        container.child(scroll)
+    } else {
+        container.child(col)
+    };
+
+    (result, list_viewport_h + 16.0)
 }
 
 fn build_scale_row(theme: &Theme, width: f32, mon: &OutputInfo) -> Rectangle {
@@ -1143,7 +1180,7 @@ fn save_layout() {
             return;
         };
         normalize_outputs(&mut state.outputs);
-        state.status = String::from("Layout saved to settings-manager.kdl and applied!");
+        state.status = String::from("Layout saved to amane.kdl and applied!");
         state.outputs.clone()
     };
 
@@ -1153,7 +1190,7 @@ fn save_layout() {
 
 fn write_niri_outputs(outputs: &[OutputInfo]) {
     let home = std::env::var("HOME").unwrap_or_default();
-    let path = PathBuf::from(format!("{home}/.config/niri/settings-manager.kdl"));
+    let path = PathBuf::from(format!("{home}/.config/niri/amane.kdl"));
     let existing = fs::read_to_string(&path).unwrap_or_default();
 
     // Strip any existing `output "..." { ... }` blocks and `// Display & Monitor Layouts` comments

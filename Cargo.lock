@@ -39,6 +39,7 @@ name = "amane-shell"
 version = "0.1.0"
 dependencies = [
  "amane",
+ "serde",
  "serde_json",
  "zbus",
 ]
