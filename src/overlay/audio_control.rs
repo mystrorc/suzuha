@@ -230,7 +230,7 @@ fn header(theme: &Theme) -> Row {
         .align_child(Center, Center)
         .cursor(Pointer)
         .on_click(|_| {
-            let _ = Command::new("pavucontrol").spawn();
+            let _ = Command::new("alacritty").args(["-e", "wiremix"]).spawn();
         })
         .child(Row::new(children![mixer_icon, mixer_text]).gap(4.0).align(Center));
 

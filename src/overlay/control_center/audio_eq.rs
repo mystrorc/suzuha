@@ -436,7 +436,7 @@ fn devices_view(theme: &Theme, width: f32, height: f32) -> Column {
         .fill(theme.surface)
         .cursor(Pointer)
         .on_click(|_| {
-            let _ = Command::new("pavucontrol").spawn();
+            let _ = Command::new("alacritty").args(["-e", "wiremix"]).spawn();
         })
         .align_child(Center, Center)
         .child(Row::new(children![mixer_icon, mixer_label]).gap(4.0).align(Center));
