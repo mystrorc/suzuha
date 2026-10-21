@@ -268,7 +268,7 @@ fn processes_card(theme: &Theme, data: &SysmonData, width: f32, height: f32) -> 
         .align_child(Center, Center)
         .cursor(Pointer)
         .on_click(|_| {
-            let _ = Command::new("alacritty").arg("-e").arg("top").spawn();
+            let _ = Command::new("ghostty").arg("-e").arg("top").spawn();
         })
         .child(Row::new(children![term_icon, term_text]).gap(4.0).align(Center));
 

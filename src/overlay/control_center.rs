@@ -1,5 +1,6 @@
 mod art;
 pub mod audio_eq;
+pub mod calendar;
 mod cava;
 mod fader;
 mod media;
@@ -19,7 +20,9 @@ const MAX_WIDTH: f32 = 780.0;
 
 const TOP_BAR_HEIGHT: f32 = 36.0;
 const TOP_BAR_GAP: f32 = 12.0;
-const CARD_HEIGHT: f32 = 240.0;
+
+// Height scaled to 1.25x of original (original HEIGHT was 324.0, new HEIGHT is 405.0)
+const CARD_HEIGHT: f32 = 321.0;
 
 const PADDING: Padding = Padding {
     top: 18.0,
@@ -30,7 +33,7 @@ const PADDING: Padding = Padding {
 
 // Self-contained floating card with all four corners rounded inward
 const INNER_HEIGHT: f32 = TOP_BAR_HEIGHT + TOP_BAR_GAP + CARD_HEIGHT;
-const HEIGHT: f32 = INNER_HEIGHT + PADDING.top + PADDING.bottom;
+const HEIGHT: f32 = INNER_HEIGHT + PADDING.top + PADDING.bottom; // 405.0 (1.25 * 324.0)
 const RADIUS: f32 = 28.0;
 
 // Distance below the bar when open, and extra room for the drop shadow
@@ -83,7 +86,7 @@ pub fn view(overlay: &Overlay, theme: &Theme, screen: Region) -> Option<PanelVie
     Some(PanelView { blob, input, reach })
 }
 
-// Higher-level tabs at the top of the middle pulldown: System Monitor / Media / Battery
+// Higher-level tabs at the top of the middle pulldown: System Monitor / Media / Calendar / Battery
 fn section_tabs(overlay: &Overlay, theme: &Theme, width: f32) -> Row {
     let sysmon_btn = section_tab_button(
         theme,
@@ -99,16 +102,23 @@ fn section_tabs(overlay: &Overlay, theme: &Theme, width: f32) -> Row {
         overlay.center_tab == 1,
         || Overlay::set_center_tab(1),
     );
+    let calendar_btn = section_tab_button(
+        theme,
+        "\u{f073}",
+        "Calendar",
+        overlay.center_tab == 2,
+        || Overlay::set_center_tab(2),
+    );
     let battery_btn = section_tab_button(
         theme,
         "󰁹",
         "Battery",
-        overlay.center_tab == 2,
-        || Overlay::set_center_tab(2),
+        overlay.center_tab == 3,
+        || Overlay::set_center_tab(3),
     );
 
     let strip = Rectangle::new()
-        .width(420.0)
+        .width(554.0)
         .height(TOP_BAR_HEIGHT)
         .radius(14.0)
         .fill(theme.surface)
@@ -120,7 +130,7 @@ fn section_tabs(overlay: &Overlay, theme: &Theme, width: f32) -> Row {
         })
         .align_child(Center, Center)
         .child(
-            Row::new(children![sysmon_btn, media_btn, battery_btn])
+            Row::new(children![sysmon_btn, media_btn, calendar_btn, battery_btn])
                 .gap(6.0)
                 .align(Center),
         );
@@ -170,7 +180,7 @@ fn section_tab_button(
     let row = Row::new(children![icon_w, label_w]).gap(6.0).align(Center);
 
     Rectangle::new()
-        .width(134.0)
+        .width(130.0)
         .height(28.0)
         .radius(10.0)
         .fill(fill)
@@ -259,7 +269,8 @@ fn content(overlay: &Overlay, theme: &Theme, width: f32) -> Rectangle {
 
     let body: Box<dyn Widget> = match overlay.center_tab {
         0 => Box::new(sysmon::embedded_view(theme, inner_width, CARD_HEIGHT)),
-        2 => Box::new(power_devices::embedded_view(theme, inner_width, CARD_HEIGHT)),
+        2 => Box::new(calendar::embedded_view(overlay, theme, inner_width, CARD_HEIGHT)),
+        3 => Box::new(power_devices::embedded_view(theme, inner_width, CARD_HEIGHT)),
         _ => {
             let card_width = inner_width - FADERS_WIDTH - GAP;
 
@@ -330,8 +341,10 @@ pub fn ipc(arguments: &[String]) -> String {
         _ => !shown,
     };
 
-    if wanted != shown {
-        Overlay::toggle_control_center();
+    if wanted {
+        Overlay::open_control_tab(0);
+    } else {
+        Overlay::write().control_center.hide();
     }
 
     String::from("ok")

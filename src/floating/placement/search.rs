@@ -6,6 +6,7 @@ use super::analysis::{Analysis, Area};
 pub enum Name {
     Clock,
     Weather,
+    Calendar,
     CpuTemperature,
     CpuUsage,
     GpuTemperature,

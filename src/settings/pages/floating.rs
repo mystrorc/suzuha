@@ -48,6 +48,7 @@ pub fn build(page: &mut Page) {
 
     switch::add(page, "widget_clock", "Clock", "Large desktop clock");
     switch::add(page, "widget_weather", "Weather", "Current weather summary");
+    switch::add(page, "widget_calendar", "Calendar", "Monthly desktop calendar");
     switch::add(page, "widget_cpu_temperature", "CPU temperature", "Processor thermal card");
     switch::add(page, "widget_cpu_usage", "CPU usage", "Processor utilization card");
 

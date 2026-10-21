@@ -156,13 +156,13 @@ fn audio_segment(theme: &Theme) -> (f32, Rectangle) {
     };
 
     let icon_glyph = if muted || volume == 0 {
-        "󰝟"
+        "\u{f075f}"
     } else if volume < 35 {
-        "󰕿"
+        "\u{f057f}"
     } else if volume < 70 {
-        "󰖀"
+        "\u{f0580}"
     } else {
-        "󰕾"
+        "\u{f057e}"
     };
 
     let speaker_value = f32::from(volume) / 100.0;
@@ -212,7 +212,7 @@ fn audio_segment(theme: &Theme) -> (f32, Rectangle) {
     (width, seg)
 }
 
-// Clock segment inside the locked center pill (supports time, date, or both)
+// Clock segment inside the locked center pill: Left click pulls down center pulldown on Calendar tab
 fn clock_segment(theme: &Theme) -> (f32, Rectangle) {
     let clock = Clock::read();
     let settings = Settings::read();
@@ -236,7 +236,7 @@ fn clock_segment(theme: &Theme) -> (f32, Rectangle) {
         .height(Parent)
         .cursor(Pointer)
         .on_click(|button| match button {
-            Button::Left => Overlay::toggle_control_center(),
+            Button::Left => Overlay::toggle_calendar(),
             _ => {}
         })
         .align_child(Center, Center)

@@ -1,3 +1,4 @@
+mod calendar;
 mod card;
 mod memory;
 mod placement;
@@ -191,6 +192,7 @@ fn size(name: Name, scale: f32) -> (f32, f32) {
     let (width, height) = match name {
         Name::Clock => (CLOCK_WIDTH, CLOCK_HEIGHT),
         Name::Weather => (WEATHER_WIDTH, WEATHER_HEIGHT),
+        Name::Calendar => (calendar::WIDTH, calendar::HEIGHT),
         _ => (card::WIDTH, card::HEIGHT),
     };
 
@@ -247,7 +249,7 @@ fn spots(
         screen: (width, height),
         usable: (MARGIN, MARGIN, width - MARGIN * 2.0, height - MARGIN * 2.0),
         clock: size(Name::Clock, scale),
-        primary: sized(&[Name::Weather]),
+        primary: sized(&[Name::Weather, Name::Calendar]),
         resources: sized(&[Name::CpuTemperature, Name::CpuUsage, Name::GpuTemperature]),
         environment: sized(&[Name::UvIndex, Name::Humidity, Name::AirQuality]),
         text_luminance,
@@ -276,6 +278,12 @@ fn corners(names: &[Name], width: f32, height: f32, scale: f32) -> HashMap<Name,
             Name::Clock => (width - MARGIN - card_width, height - MARGIN - card_height),
             Name::Weather => (width - MARGIN - card_width, MARGIN),
 
+            Name::Calendar => {
+                bottom_left += card_width + GAP;
+
+                (bottom_left - card_width - GAP, height - MARGIN - card_height)
+            }
+
             Name::CpuTemperature | Name::CpuUsage | Name::GpuTemperature => {
                 top_left += card_width + GAP;
 
@@ -300,7 +308,10 @@ fn cards(theme: &Theme) -> Vec<(Name, Rectangle)> {
     let sensors = Sensors::read();
     let weather = Weather::read();
 
-    let mut cards = vec![(Name::Weather, weather_card(theme, &weather))];
+    let mut cards = vec![
+        (Name::Weather, weather_card(theme, &weather)),
+        (Name::Calendar, calendar::view(theme)),
+    ];
 
     if let Some(cpu) = sensors.cpu {
         cards.push((Name::CpuTemperature, temperature(theme, "CPU TEMPERATURE", cpu)));
@@ -386,6 +397,7 @@ fn turned_on(name: Name) -> bool {
     let key = match name {
         Name::Clock => "widget_clock",
         Name::Weather => "widget_weather",
+        Name::Calendar => "widget_calendar",
         Name::CpuTemperature => "widget_cpu_temperature",
         Name::CpuUsage => "widget_cpu_usage",
         Name::GpuTemperature => "widget_gpu_temperature",

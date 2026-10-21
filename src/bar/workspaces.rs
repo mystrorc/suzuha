@@ -68,7 +68,7 @@ pub fn view(theme: &Theme, width: f32) -> Row {
         .radius(Full)
         .fill(theme.surface)
         .cursor(Pointer)
-        .on_click(|_| Overlay::toggle_power_menu())
+        .on_click(|_| Overlay::toggle_app_menu())
         .align_child(Center, Center)
         .child(
             Text::new(distro_logo())

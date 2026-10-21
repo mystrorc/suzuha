@@ -1,3 +1,4 @@
+pub mod app_menu;
 pub mod audio_control;
 pub mod control_center;
 pub mod launcher;
@@ -13,7 +14,7 @@ pub mod utility;
 
 use amane::{
     Color, Horizontal, InputArea, Key, Keyboard, Layer, LayerWindow, Margin, Monitor, Parent,
-    Rectangle, Service, Stack, Vertical, Zone, children,
+    Rectangle, Service, Vertical, Zone,
 };
 
 use crate::bar;
@@ -52,6 +53,7 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
 
     let any_panel_open = overlay.power_menu.shown
         || (overlay.launcher.shown && show_launcher)
+        || overlay.app_menu.shown
         || overlay.control_center.shown
         || overlay.audio_control.shown
         || overlay.sysmon.shown
@@ -75,7 +77,7 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
 
     let mut panels: Vec<PanelView> = Vec::new();
 
-    if let Some(panel) = power_menu::view(&overlay, &theme) {
+    if let Some(panel) = power_menu::view(&overlay, &theme, screen) {
         panels.push(panel);
     }
 
@@ -83,6 +85,10 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
         if let Some(panel) = launcher::view(&overlay, &theme, screen, &monitor.name) {
             panels.push(panel);
         }
+    }
+
+    if let Some(panel) = app_menu::view(&overlay, &theme, screen) {
+        panels.push(panel);
     }
 
     if let Some(panel) = control_center::view(&overlay, &theme, screen) {
@@ -114,10 +120,12 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
     };
 
     /*
-     * the launcher and a password field are typed into, so they take the
+     * the launcher, app_menu and a password field are typed into, so they take the
      * keyboard while open; the utility center takes it once clicked, for escape
      */
-    let keyboard = if (overlay.launcher.shown && show_launcher) || utility::wants_keyboard(&overlay) {
+    let keyboard = if (overlay.launcher.shown && show_launcher)
+        || overlay.app_menu.shown
+        || utility::wants_keyboard(&overlay) {
         Keyboard::Exclusive
     } else if overlay.utility.shown {
         Keyboard::OnDemand
@@ -180,6 +188,7 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
 // only one panel is out at a time, so only one of these acts on the key
 fn key_pressed(key: Key) {
     launcher::key_pressed(key);
+    app_menu::key_pressed(key);
     utility::key_pressed(key);
 }
 
@@ -193,19 +202,8 @@ fn input_area(region: Region, window: Region) -> InputArea {
     }
 }
 
-/*
- * the 1 pixel still draws the liquid invisibly and one nearly clear pixel:
- * the first draw builds the shader and the vector renderer on the gpu, and
- * that took long enough to swallow the first panel's opening
- */
-fn empty(screen: Region) -> LayerWindow {
-    let placement = Placement {
-        x: 0.0,
-        y: 0.0,
-        screen_width: screen.width,
-        screen_height: screen.height,
-    };
-
+// an empty window stays mapped, so a panel opening doesn't wait on the compositor
+fn empty(_screen: Region) -> LayerWindow {
     LayerWindow::new()
         .width(1.0)
         .height(1.0)
@@ -213,9 +211,6 @@ fn empty(screen: Region) -> LayerWindow {
         .anchor_horizontal(Horizontal::Left)
         .layer(Layer::Top)
         .space(Zone::Respect)
-        .click_through()
-        .child(Stack::new(children![
-            liquid::view(Color::TRANSPARENT, Vec::new(), placement),
-            Rectangle::new().width(1.0).height(1.0).fill(Color::rgba(0, 0, 0, 1)),
-        ]))
+        .visible(false)
+        .child(Rectangle::new().width(1.0).height(1.0).fill(Color::TRANSPARENT))
 }

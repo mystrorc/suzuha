@@ -5,22 +5,25 @@ use super::utility::{self, Page};
 use crate::motion::{self, Glide};
 
 // how long the power menu's hover fill and the launcher's list take to move
-const FILL_DURATION: u64 = 340;
-pub const LIST_DURATION: u64 = 240;
+const FILL_DURATION: u64 = 180;
+pub const LIST_DURATION: u64 = 160;
 
-// which panels are out, shared by the bar that opens them and the overlay that draws them
+/*
+ * the state every overlay panel shares, so opening one closes the others
+ * without having to pass handles around; changed from inside widgets
+ */
 pub struct Overlay {
     pub power_menu: Panel,
 
-    // how far each power menu button's hover color has filled it, 0 to 1
+    // how far each action has grown its hover background, 0 to 1
     pub action_fills: Vec<Glide>,
 
-    // leaving a panel for the bar keeps it open
+    // whether the pointer is over the top bar
     pub bar_hovered: bool,
 
     pub control_center: Panel,
 
-    // higher-level tab in the middle pulldown: 0 = System Monitor, 1 = Media, 2 = Battery
+    // higher-level tab in the middle pulldown: 0 = System Monitor, 1 = Media, 2 = Calendar, 3 = Battery
     pub center_tab: usize,
 
     // sub-tab under Media: 0 = Now Playing, 1 = Audio & EQ
@@ -28,6 +31,12 @@ pub struct Overlay {
 
     pub launcher: Panel,
     pub launcher_monitor: Option<String>,
+
+    pub app_menu: Panel,
+    pub app_menu_query: String,
+    pub app_menu_category: usize,
+    pub app_menu_scroll: f32,
+    pub app_menu_hovered: Option<usize>,
 
     pub sysmon: Panel,
 
@@ -98,6 +107,11 @@ impl Service for Overlay {
             control_tab: 0,
             launcher: Panel::new(),
             launcher_monitor: None,
+            app_menu: Panel::new(),
+            app_menu_query: String::new(),
+            app_menu_category: 0,
+            app_menu_scroll: 0.0,
+            app_menu_hovered: None,
             sysmon: Panel::new(),
             power_devices: Panel::new(),
             audio_control: Panel::new(),
@@ -133,6 +147,7 @@ impl Overlay {
         let mut overlay = Self::write();
 
         overlay.launcher.hide();
+        overlay.app_menu.hide();
         overlay.control_center.hide();
         overlay.sysmon.hide();
         overlay.power_devices.hide();
@@ -141,14 +156,44 @@ impl Overlay {
         overlay.power_menu.toggle();
     }
 
+    #[allow(dead_code)]
     pub fn hide_power_menu() {
         Self::write().power_menu.hide();
+    }
+
+    pub fn toggle_app_menu() {
+        let mut overlay = Self::write();
+
+        overlay.launcher.hide();
+        overlay.power_menu.hide();
+        overlay.control_center.hide();
+        overlay.sysmon.hide();
+        overlay.power_devices.hide();
+        overlay.audio_control.hide();
+        utility::close(&mut overlay);
+
+        if overlay.app_menu.shown {
+            overlay.app_menu.hide();
+        } else {
+            overlay.app_menu_query.clear();
+            overlay.app_menu_category = 0;
+            overlay.app_menu_scroll = 0.0;
+            overlay.app_menu_hovered = None;
+            amane::TextInput::set_text("app_menu_search", "");
+            overlay.app_menu.show();
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn hide_app_menu() {
+        Self::write().app_menu.hide();
     }
 
     pub fn toggle_utility() {
         let mut overlay = Self::write();
 
         overlay.launcher.hide();
+        overlay.app_menu.hide();
         overlay.power_menu.hide();
         overlay.control_center.hide();
         overlay.sysmon.hide();
@@ -181,6 +226,7 @@ impl Overlay {
         overlay.center_tab = 1;
         overlay.control_tab = tab;
         overlay.launcher.hide();
+        overlay.app_menu.hide();
         overlay.power_menu.hide();
         overlay.sysmon.hide();
         overlay.power_devices.hide();
@@ -193,6 +239,7 @@ impl Overlay {
         let mut overlay = Self::write();
 
         overlay.launcher.hide();
+        overlay.app_menu.hide();
         overlay.power_menu.hide();
         overlay.sysmon.hide();
         overlay.power_devices.hide();
@@ -215,8 +262,12 @@ impl Overlay {
         Self::toggle_center_section(0);
     }
 
-    pub fn toggle_power_devices() {
+    pub fn toggle_calendar() {
         Self::toggle_center_section(2);
+    }
+
+    pub fn toggle_power_devices() {
+        Self::toggle_center_section(3);
     }
 
     #[allow(dead_code)]
@@ -229,6 +280,7 @@ impl Overlay {
         let mut overlay = Self::write();
 
         overlay.launcher.hide();
+        overlay.app_menu.hide();
         overlay.power_menu.hide();
         overlay.control_center.hide();
         overlay.sysmon.hide();
@@ -251,7 +303,9 @@ impl Overlay {
             overlay.audio_control.was_hovered = true;
         }
 
-        overlay.dismiss_if_left();
+        if !inside && overlay.audio_control.was_hovered {
+            overlay.audio_control.hide();
+        }
     }
 
     pub fn hover_control_center(inside: bool) {
@@ -263,7 +317,9 @@ impl Overlay {
             overlay.control_center.was_hovered = true;
         }
 
-        overlay.dismiss_if_left();
+        if !inside && overlay.control_center.was_hovered {
+            overlay.control_center.hide();
+        }
     }
 
     pub fn hover_power_menu(inside: bool) {
@@ -275,7 +331,9 @@ impl Overlay {
             overlay.power_menu.was_hovered = true;
         }
 
-        overlay.dismiss_if_left();
+        if !inside && overlay.power_menu.was_hovered {
+            overlay.power_menu.hide();
+        }
     }
 
     pub fn hover_utility(inside: bool) {
@@ -287,7 +345,9 @@ impl Overlay {
             overlay.utility.was_hovered = true;
         }
 
-        overlay.dismiss_if_left();
+        if !inside && overlay.utility.was_hovered {
+            overlay.utility.hide();
+        }
     }
 
     pub fn hover_popup(id: u32, inside: bool) {
@@ -331,6 +391,7 @@ impl Overlay {
 
         let mut panels = vec![
             &mut self.power_menu,
+            &mut self.app_menu,
             &mut self.control_center,
             &mut self.sysmon,
             &mut self.power_devices,

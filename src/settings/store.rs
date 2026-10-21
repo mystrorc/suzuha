@@ -7,7 +7,7 @@ use std::process::Command;
 use amane::Service;
 
 // every setting and the value it has until changed
-const DEFAULTS: [(&str, &str); 103] = [
+const DEFAULTS: [(&str, &str); 105] = [
     // appearance
     ("blur_strength", "1"),
     ("reduce_transparency", "false"),
@@ -68,6 +68,7 @@ const DEFAULTS: [(&str, &str); 103] = [
     ("bar_battery", "true"),
     ("bar_memory", "true"),
     ("bar_tray", "true"),
+    ("bar_power", "true"),
     ("clock_display", "both"),
     ("clock_24_hour", "false"),
     ("clock_seconds", "false"),
@@ -103,6 +104,7 @@ const DEFAULTS: [(&str, &str); 103] = [
     ("floating_lock_placement", "false"),
     ("widget_clock", "true"),
     ("widget_weather", "true"),
+    ("widget_calendar", "true"),
     ("widget_cpu_temperature", "true"),
     ("widget_cpu_usage", "true"),
     ("widget_gpu_temperature", "true"),

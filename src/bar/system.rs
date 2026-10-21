@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 
 use amane::{
-    Battery, Button, Center, Color, End, Memory, Padding, Parent, Pointer, Rectangle, Row, Service,
+    Battery, Button, Center, Color, End, Full, Memory, Padding, Parent, Pointer, Rectangle, Row, Service,
     SpaceBetween, Stack, Text, Widget, children,
 };
 
@@ -37,7 +37,7 @@ thread_local! {
     static RECORDING: RefCell<Option<(Glide, String)>> = const { RefCell::new(None) };
 }
 
-// Right section of the bar: only the System Tray
+// Right section of the bar: System Tray and Power Menu button
 pub fn view(theme: &Theme, width: f32) -> Row {
     let settings = Settings::read();
 
@@ -45,6 +45,10 @@ pub fn view(theme: &Theme, width: f32) -> Row {
 
     if settings.flag("bar_tray") {
         items.push(Box::new(tray(theme)));
+    }
+
+    if settings.flag("bar_power") {
+        items.push(Box::new(power_button(theme)));
     }
 
     items.push(Box::new(Rectangle::new().width(EDGE).height(1.0)));
@@ -55,6 +59,24 @@ pub fn view(theme: &Theme, width: f32) -> Row {
         .gap(10.0)
         .justify(End)
         .align(Center)
+}
+
+fn power_button(theme: &Theme) -> Rectangle {
+    let icon = Text::new("\u{f011}") // Nerd Font power icon
+        .size(15.0)
+        .font(fonts::NERD)
+        .tight()
+        .color(theme.danger);
+
+    Rectangle::new()
+        .width(32.0)
+        .height(32.0)
+        .radius(Full)
+        .fill(theme.surface)
+        .cursor(Pointer)
+        .on_click(|_| Overlay::toggle_power_menu())
+        .align_child(Center, Center)
+        .child(icon)
 }
 
 // a ring with a small icon inside, then the value

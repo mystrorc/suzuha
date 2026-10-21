@@ -89,7 +89,7 @@ pub fn export(theme: &Theme) {
          mkdir -p '{gtk3}' '{gtk4}'; \
          ln -sfn '{data}/themes/{active}/gtk-3.0/gtk.css' '{gtk3}/gtk.css'; \
          ln -sfn '{data}/themes/{active}/gtk-4.0/gtk.css' '{gtk4}/gtk.css'; \
-         sleep 0.2 && systemctl --user try-restart xdg-desktop-portal-gnome.service"
+         sleep 0.2 && systemctl --user try-restart xdg-desktop-portal-gtk.service"
     );
 
     amane::spawn(&script);

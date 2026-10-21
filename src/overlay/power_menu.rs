@@ -1,5 +1,5 @@
 use amane::{
-    Button, Center, Color, Column, Padding, Pointer, Rectangle, Row, Service, Stack, Start, Text,
+    Button, Center, Color, Column, End, Padding, Pointer, Rectangle, Row, Service, Stack, Start, Text,
     Weight, Widget, children,
 };
 
@@ -12,10 +12,10 @@ const WIDTH: f32 = 250.0;
 const HEIGHT: f32 = 330.0;
 const RADIUS: f32 = 30.0;
 
-// the panel reaches this far past the screen's left edge
+// the panel reaches this far past the screen's right edge
 const EDGE_OVERLAP: f32 = 40.0;
 
-// sits just below the bar so its top-right corner is cleanly rounded inward
+// sits just below the bar so its top-left corner is cleanly rounded inward
 const TOP: f32 = 8.0;
 
 // how far past its own width it slides to let go of the edge
@@ -23,9 +23,9 @@ const HIDDEN_MARGIN: f32 = 32.0;
 
 const PADDING: Padding = Padding {
     top: 16.0,
-    right: 16.0,
+    right: EDGE_OVERLAP + 12.0,
     bottom: 16.0,
-    left: EDGE_OVERLAP + 12.0,
+    left: 16.0,
 };
 
 pub const ACTION_COUNT: usize = 5;
@@ -76,17 +76,17 @@ const ACTIONS: [Action; ACTION_COUNT] = [
     },
 ];
 
-// none while fully hidden
-pub fn view(overlay: &Overlay, theme: &Theme) -> Option<PanelView> {
+// none while fully hidden, anchored to the right screen edge
+pub fn view(overlay: &Overlay, theme: &Theme, screen: Region) -> Option<PanelView> {
     let progress = overlay.power_menu.progress.value();
 
     if progress <= 0.001 {
         return None;
     }
 
-    let hidden = -(WIDTH + HIDDEN_MARGIN);
+    let hidden = WIDTH + HIDDEN_MARGIN;
 
-    let x = -EDGE_OVERLAP + hidden * (1.0 - progress);
+    let x = screen.width - WIDTH + EDGE_OVERLAP + hidden * (1.0 - progress);
 
     let blob = Blob::new(x, TOP, WIDTH, HEIGHT)
         .radius(RADIUS)
@@ -99,11 +99,13 @@ pub fn view(overlay: &Overlay, theme: &Theme) -> Option<PanelView> {
         height: HEIGHT,
     };
 
-    // fully out it ends at its resting edge, and its shadow spreads a little past that
+    // fully out it starts at its resting edge, and its shadow spreads a little past that
+    let reach_width = WIDTH - EDGE_OVERLAP + liquid::CONNECTION;
+
     let reach = Region {
-        x: 0.0,
+        x: screen.width - reach_width,
         y: 0.0,
-        width: -EDGE_OVERLAP + WIDTH + liquid::CONNECTION,
+        width: reach_width,
         height: TOP + HEIGHT + liquid::CONNECTION,
     };
 
@@ -190,35 +192,47 @@ fn button(index: usize, action: &Action, fill: f32, last: bool, theme: &Theme) -
         .align_child(Start, Center)
         .child(Row::new(children![icon, label]).gap(12.0).align(Center));
 
-    let mut layers: Vec<Box<dyn Widget>> = vec![Box::new(background), Box::new(front)];
+    let border = Rectangle::new()
+        .width(BUTTON_WIDTH - 24.0)
+        .height(1.0)
+        .fill(if last { Color::TRANSPARENT } else { theme.border });
 
-    if !last {
-        let line_color = if hovered {
-            Color::TRANSPARENT
-        } else {
-            theme.border
-        };
+    let border = Rectangle::new()
+        .width(BUTTON_WIDTH)
+        .height(BUTTON_HEIGHT)
+        .align_child(Center, End)
+        .child(border);
 
-        let line = Rectangle::new()
-            .width(BUTTON_WIDTH - 24.0)
-            .height(1.0)
-            .fill(line_color)
-            .translate(12.0, BUTTON_HEIGHT - 1.0);
+    Stack::new(children![background, front, border])
+}
 
-        layers.push(Box::new(line));
-    }
+// starts the action and closes the menu
+fn run(command: &'static str) {
+    Overlay::toggle_power_menu();
 
-    Stack::new(layers)
+    amane::spawn(command);
 }
 
 fn hover_action(index: usize, inside: bool) {
-    let target = if inside { 1.0 } else { 0.0 };
-
-    Overlay::write().action_fills[index].to(target);
+    Overlay::write().action_fills[index].to(if inside { 1.0 } else { 0.0 });
 }
 
-fn run(command: &str) {
-    Overlay::hide_power_menu();
+pub fn ipc(arguments: &[String]) -> String {
+    let command = arguments.first().map(String::as_str).unwrap_or("toggle");
 
-    amane::spawn(command);
+    let shown = Overlay::read().power_menu.shown;
+
+    let wanted = match command {
+        "show" => true,
+        "hide" => false,
+        _ => !shown,
+    };
+
+    if wanted {
+        Overlay::write().power_menu.show();
+    } else {
+        Overlay::write().power_menu.hide();
+    }
+
+    String::from("ok")
 }
