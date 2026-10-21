@@ -550,7 +550,7 @@ fn launch_selected() {
         Kind::Colors => {
             overlay.launcher.hide();
 
-            crate::settings::open_on(crate::settings::Page::Colors);
+            crate::settings::open_on(crate::settings::Page::Appearance);
         }
 
         Kind::Wallpapers => {

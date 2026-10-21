@@ -84,6 +84,7 @@ impl<'a> Page<'a> {
     }
 
     // a card of its own, like the palette preview
+    #[allow(dead_code)]
     pub fn card(&mut self, height: f32, card: impl Widget + 'static) {
         self.end_group();
 

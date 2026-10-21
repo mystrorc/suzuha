@@ -81,7 +81,6 @@ pub enum Page {
     Input,
     Audio,
     DefaultApps,
-    Colors,
     Launcher,
     Wallpaper,
     Bar,
@@ -93,7 +92,7 @@ pub enum Page {
 }
 
 // every page in the list's order, with its icon, label and the line under its title
-const PAGES: [(Page, &str, &str, &str); 15] = [
+const PAGES: [(Page, &str, &str, &str); 14] = [
     (Page::User, "󰍹", "System info", "System specifications and user profile configuration."),
     (
         Page::Monitors,
@@ -114,12 +113,6 @@ const PAGES: [(Page, &str, &str, &str); 15] = [
         "◫",
         "Default apps",
         "Manage preferred web browser, file manager, terminal emulator, and text editor.",
-    ),
-    (
-        Page::Colors,
-        "󰏘",
-        "Colors",
-        "Control palette selection and how dynamic wallpaper colors are generated.",
     ),
     (
         Page::Launcher,

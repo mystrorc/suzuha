@@ -29,7 +29,6 @@ pub fn build(shown: Shown, page: &mut Page) {
         Shown::Input => input::build(page),
         Shown::Audio => audio::build(page),
         Shown::DefaultApps => default_apps::build(page),
-        Shown::Colors => colors::build(page),
         Shown::Launcher => launcher::build(page),
         Shown::Wallpaper => wallpaper::build(page),
         Shown::Bar => bar::build(page),

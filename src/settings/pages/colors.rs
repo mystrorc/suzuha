@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use amane::{Center, Column, Padding, Rectangle, Row, Start, Text, Weight, Widget, children};
 
 use super::super::page::Page;

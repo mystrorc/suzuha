@@ -5,8 +5,8 @@ use std::sync::{LazyLock, Mutex};
 use std::time::Instant;
 
 use amane::{
-    Center, Color, Column, Padding, Point, Pointer, Rectangle, Row, ScrollArea, SpaceBetween, Stack, Start,
-    Text, Weight, Widget, children,
+    Brightness, Center, Color, End, Column, Full, Padding, Point, Pointer, Rectangle, Row, ScrollArea, Service,
+    SpaceBetween, Stack, Start, Text, Weight, Widget, children,
 };
 
 use super::super::button::{self, Style};
@@ -348,7 +348,11 @@ pub fn build(page: &mut Page) {
             enable_control,
             button::width(enable_btn_label),
         );
-        page.row(row::HEIGHT, enable_row);
+                page.row(row::HEIGHT, enable_row);
+
+        // Display Brightness row
+        let brightness_row = build_brightness_row(theme, width);
+        page.row(row::HEIGHT, brightness_row);
 
         // Resolution & Refresh Rate row
         let mode_row = build_mode_row(theme, width, &mon, mode_menu_open);
@@ -711,6 +715,84 @@ fn build_monitor_tabs(
             .justify(SpaceBetween)
             .align(Center),
         )
+}
+
+fn build_brightness_row(theme: &Theme, width: f32) -> Rectangle {
+    let percent = Brightness::read().percent();
+    let value = (percent as f32 / 100.0).clamp(0.01, 1.0);
+
+    let track_w = 170.0;
+    let track_h = 4.0;
+    let thumb_size = 16.0;
+    let val_w = 48.0;
+    let gap = 8.0;
+
+    let filled = Rectangle::new()
+        .width(track_w * value)
+        .height(track_h)
+        .radius(Full)
+        .fill(theme.accent);
+
+    let line = Rectangle::new()
+        .width(track_w)
+        .height(track_h)
+        .radius(Full)
+        .fill(theme.border)
+        .translate(0.0, (row::CONTROL_HEIGHT - track_h) / 2.0)
+        .child(filled);
+
+    let thumb_x = (track_w - thumb_size) * value;
+
+    let thumb = Rectangle::new()
+        .width(thumb_size)
+        .height(thumb_size)
+        .radius(Full)
+        .fill(theme.accent)
+        .translate(thumb_x, (row::CONTROL_HEIGHT - thumb_size) / 2.0);
+
+    let area = Rectangle::new()
+        .width(track_w)
+        .height(row::CONTROL_HEIGHT)
+        .cursor(Pointer)
+        .on_drag(move |point| {
+            let along = (point.x / track_w).clamp(0.01, 1.0);
+            let new_percent = (along * 100.0).round() as u8;
+            if new_percent != Brightness::read().percent() {
+                Brightness::set(new_percent);
+            }
+        });
+
+    let slider_stack = Stack::new(children![line, thumb, area])
+        .width(track_w)
+        .height(row::CONTROL_HEIGHT);
+
+    let val_label = Text::new(format!("{percent}%"))
+        .size(12.0)
+        .font(fonts::BODY)
+        .weight(Weight::SemiBold)
+        .color(theme.secondary_text);
+
+    let val_box = Rectangle::new()
+        .width(val_w)
+        .height(row::CONTROL_HEIGHT)
+        .align_child(End, Center)
+        .child(val_label);
+
+    let control = Row::new(children![slider_stack, val_box])
+        .gap(gap)
+        .align(Center);
+
+    let control_w = track_w + gap + val_w;
+
+    row::view(
+        theme,
+        width,
+        row::HEIGHT,
+        "Monitor brightness",
+        "Adjust display backlight level",
+        control,
+        control_w,
+    )
 }
 
 fn build_mode_row(theme: &Theme, width: f32, mon: &OutputInfo, menu_open: bool) -> Rectangle {

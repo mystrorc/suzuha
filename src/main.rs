@@ -29,6 +29,31 @@ fn ipc_monitor_layout(_arguments: &[String]) -> String {
     String::from("ok")
 }
 
+fn ipc_brightness(arguments: &[String]) -> String {
+    let arg = arguments.first().map(String::as_str).unwrap_or("get");
+    let current = amane::Brightness::read().percent() as i32;
+
+    if arg == "get" {
+        return current.to_string();
+    }
+
+    let target = if let Some(inc) = arg.strip_prefix('+') {
+        let delta = inc.trim_end_matches('%').parse::<i32>().unwrap_or(10);
+        (current + delta).clamp(1, 100) as u8
+    } else if let Some(dec) = arg.strip_suffix('-') {
+        let delta = dec.trim_end_matches('%').parse::<i32>().unwrap_or(10);
+        (current - delta).clamp(1, 100) as u8
+    } else if let Some(dec) = arg.strip_prefix('-') {
+        let delta = dec.trim_end_matches('%').parse::<i32>().unwrap_or(10);
+        (current - delta).clamp(1, 100) as u8
+    } else {
+        arg.trim_end_matches('%').parse::<u8>().unwrap_or(current as u8).clamp(1, 100)
+    };
+
+    amane::Brightness::set(target);
+    target.to_string()
+}
+
 fn main() {
     // reading it once starts the palette before the first frame
     drop(Wallpaper::read());
@@ -75,6 +100,7 @@ fn main() {
         .window_per_monitor(overlay::view)
         .window_per_monitor(wallpaper::picker::view)
         .lock(lock_screen::view)
+        .ipc("brightness", ipc_brightness)
         .ipc("launcher", overlay::launcher::ipc)
         .ipc("app_menu", overlay::app_menu::ipc)
         .ipc("power_menu", overlay::power_menu::ipc)
