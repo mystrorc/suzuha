@@ -80,7 +80,7 @@ const ACTIONS: [Action; ACTION_COUNT] = [
 pub fn view(overlay: &Overlay, theme: &Theme, screen: Region) -> Option<PanelView> {
     let progress = overlay.power_menu.progress.value();
 
-    if progress <= 0.001 {
+    if !overlay.power_menu.shown && progress <= 0.001 {
         return None;
     }
 

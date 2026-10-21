@@ -65,7 +65,7 @@ impl Page {
 pub fn view(overlay: &Overlay, theme: &Theme, screen: Region) -> Option<PanelView> {
     let progress = overlay.utility.progress.value();
 
-    if progress <= 0.001 {
+    if !overlay.utility.shown && progress <= 0.001 {
         return None;
     }
 

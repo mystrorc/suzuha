@@ -106,7 +106,7 @@ fn get_cached_menu_apps() -> Vec<CachedApp> {
 pub fn view(overlay: &Overlay, theme: &Theme, screen: Region) -> Option<PanelView> {
     let progress = overlay.app_menu.progress.value();
 
-    if progress <= 0.001 {
+    if !overlay.app_menu.shown && progress <= 0.001 {
         return None;
     }
 

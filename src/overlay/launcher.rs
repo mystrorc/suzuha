@@ -67,7 +67,7 @@ thread_local! {
 pub fn view(overlay: &Overlay, theme: &Theme, screen: Region, monitor_name: &str) -> Option<PanelView> {
     let progress = overlay.launcher.progress.value();
 
-    if progress <= 0.001 {
+    if !overlay.launcher.shown && progress <= 0.001 {
         return None;
     }
 

@@ -146,7 +146,7 @@ impl AudioDevices {
 pub fn view(overlay: &Overlay, theme: &Theme, screen: Region) -> Option<PanelView> {
     let progress = overlay.audio_control.progress.value();
 
-    if progress <= 0.001 {
+    if !overlay.audio_control.shown && progress <= 0.001 {
         return None;
     }
 

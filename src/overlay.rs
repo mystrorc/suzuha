@@ -219,6 +219,7 @@ fn empty(_screen: Region) -> LayerWindow {
         .anchor_horizontal(Horizontal::Left)
         .layer(Layer::Top)
         .space(Zone::Respect)
-        .visible(false)
+        .click_through()
+        .keyboard(Keyboard::None)
         .child(Rectangle::new().width(1.0).height(1.0).fill(Color::TRANSPARENT))
 }

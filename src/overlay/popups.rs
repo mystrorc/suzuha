@@ -198,7 +198,7 @@ impl Popups {
     ) -> Option<PanelView> {
         let progress = self.panel.progress.value();
 
-        if progress <= 0.001 {
+        if !self.panel.shown && progress <= 0.001 {
             self.height = None;
 
             return None;

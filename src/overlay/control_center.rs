@@ -53,7 +53,7 @@ const MICROPHONE_ICON: &str = "󰍬";
 pub fn view(overlay: &Overlay, theme: &Theme, screen: Region) -> Option<PanelView> {
     let progress = overlay.control_center.progress.value();
 
-    if progress <= 0.001 {
+    if !overlay.control_center.shown && progress <= 0.001 {
         return None;
     }
 
