@@ -428,11 +428,12 @@ fn query_devices() -> (Vec<AudioDevice>, Vec<AudioDevice>) {
     (sinks, sources)
 }
 
-pub fn ipc(_arguments: &[String]) -> String {
+pub fn ipc(arguments: &[String]) -> String {
+    let monitor_arg = arguments.iter().find(|arg| !matches!(arg.as_str(), "toggle" | "show" | "hide")).map(String::as_str);
     if Overlay::read().control_center.shown && Overlay::read().control_tab == 1 {
-        Overlay::toggle_control_center();
+        Overlay::toggle_control_center(monitor_arg);
     } else {
-        Overlay::open_control_tab(1);
+        Overlay::open_control_tab(1, monitor_arg);
     }
     String::from("ok")
 }

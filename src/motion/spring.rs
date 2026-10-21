@@ -6,7 +6,7 @@ use std::time::Instant;
  * one drawing at a new size for the first time, slows the motion for a
  * moment instead of skipping most of it
  */
-const MAX_STEP: f32 = 1.0 / 30.0;
+const MAX_STEP: f32 = 1.0 / 12.0;
 
 /*
  * a value pulled toward its target by a spring and slowed by damping; unlike

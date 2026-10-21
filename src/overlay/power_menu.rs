@@ -208,7 +208,7 @@ fn button(index: usize, action: &Action, fill: f32, last: bool, theme: &Theme) -
 
 // starts the action and closes the menu
 fn run(command: &'static str) {
-    Overlay::toggle_power_menu();
+    Overlay::toggle_power_menu(None);
 
     amane::spawn(command);
 }
@@ -219,6 +219,7 @@ fn hover_action(index: usize, inside: bool) {
 
 pub fn ipc(arguments: &[String]) -> String {
     let command = arguments.first().map(String::as_str).unwrap_or("toggle");
+    let monitor_arg = arguments.get(1).map(String::as_str);
 
     let shown = Overlay::read().power_menu.shown;
 
@@ -229,7 +230,9 @@ pub fn ipc(arguments: &[String]) -> String {
     };
 
     if wanted {
-        Overlay::write().power_menu.show();
+        let mut overlay = Overlay::write();
+        overlay.set_active_monitor(monitor_arg);
+        overlay.power_menu.show();
     } else {
         Overlay::write().power_menu.hide();
     }

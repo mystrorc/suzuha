@@ -332,6 +332,7 @@ fn faders(theme: &Theme) -> Rectangle {
 // "toggle", "show" or "hide"
 pub fn ipc(arguments: &[String]) -> String {
     let command = arguments.first().map(String::as_str).unwrap_or("toggle");
+    let monitor_arg = arguments.get(1).map(String::as_str);
 
     let shown = Overlay::read().control_center.shown && Overlay::read().center_tab == 1;
 
@@ -342,7 +343,7 @@ pub fn ipc(arguments: &[String]) -> String {
     };
 
     if wanted {
-        Overlay::open_control_tab(0);
+        Overlay::open_control_tab(0, monitor_arg);
     } else {
         Overlay::write().control_center.hide();
     }

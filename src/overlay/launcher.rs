@@ -352,38 +352,32 @@ fn icon(entry: &Entry, theme: &Theme) -> Rectangle {
 
 pub fn ipc(arguments: &[String]) -> String {
     let command = arguments.first().map(String::as_str).unwrap_or("toggle");
+    let monitor_arg = arguments.get(1).map(String::as_str);
 
     let mut overlay = Overlay::write();
 
     match command {
-        "show" => show(&mut overlay),
+        "show" => show(&mut overlay, monitor_arg),
         "showTmux" => {
-            show(&mut overlay);
+            show(&mut overlay, monitor_arg);
 
             search_tmux(&mut overlay);
         }
         "hide" => overlay.launcher.hide(),
         _ if overlay.launcher.shown => overlay.launcher.hide(),
-        _ => show(&mut overlay),
+        _ => show(&mut overlay, monitor_arg),
     }
 
     String::from("ok")
 }
 
 // opens at the top of the list, on an empty search unless the last one is remembered
-fn show(overlay: &mut Overlay) {
+fn show(overlay: &mut Overlay, monitor: Option<&str>) {
     overlay.power_menu.hide();
     overlay.control_center.hide();
     super::utility::close(overlay);
+    overlay.set_active_monitor(monitor);
     overlay.launcher.show();
-
-    // Lock launcher display to the currently focused monitor
-    let focused_output = amane::Workspaces::read()
-        .list()
-        .iter()
-        .find(|w| w.focused())
-        .and_then(|w| w.output().map(String::from));
-    overlay.launcher_monitor = focused_output;
 
     // remembering keeps the last search, and the field still shows it
     if !Settings::read().flag("launcher_remember_query") {

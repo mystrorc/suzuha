@@ -61,14 +61,15 @@ fn distro_logo() -> &'static str {
 }
 
 // Left section of the bar: only the Power Menu button with the centered distro logo
-pub fn view(theme: &Theme, width: f32) -> Row {
+pub fn view(monitor: &Monitor, theme: &Theme, width: f32) -> Row {
+    let monitor_name = monitor.name.clone();
     let logo = Rectangle::new()
         .width(34.0)
         .height(STRIP_HEIGHT)
         .radius(Full)
         .fill(theme.surface)
         .cursor(Pointer)
-        .on_click(|_| Overlay::toggle_app_menu())
+        .on_click(move |_| Overlay::toggle_app_menu(Some(&monitor_name)))
         .align_child(Center, Center)
         .child(
             Text::new(distro_logo())
@@ -112,7 +113,7 @@ pub fn workspaces_strip(monitor: &Monitor, theme: &Theme, style: &str) -> Rectan
 }
 
 // Only shown while media is actively playing
-pub fn media(theme: &Theme) -> Option<Rectangle> {
+pub fn media(monitor: &Monitor, theme: &Theme) -> Option<Rectangle> {
     let media = Media::read();
 
     if !media.playing() || media.title().is_empty() {
@@ -141,11 +142,12 @@ pub fn media(theme: &Theme) -> Option<Rectangle> {
     // the icon is about 9px wide, then a 7px gap and 20px of padding
     let width = 9.0 + 7.0 + text_width + 20.0;
 
+    let monitor_name = monitor.name.clone();
     Some(
         pill::view(width, theme.surface)
             .cursor(Pointer)
-            .on_click(|button| match button {
-                Button::Left => Overlay::toggle_control_center(),
+            .on_click(move |button| match button {
+                Button::Left => Overlay::toggle_control_center(Some(&monitor_name)),
                 _ => Media::play_pause(),
             })
             .align_child(Center, Center)

@@ -46,13 +46,31 @@ pub struct PanelView {
 pub fn view(monitor: &Monitor) -> LayerWindow {
     let overlay = Overlay::read();
 
-    let show_launcher = match &overlay.launcher_monitor {
+    let active_name = match &overlay.active_monitor {
+        Some(name) => Some(name.clone()),
+        None => Overlay::focused_monitor(),
+    };
+
+    let show_on_this_monitor = match &active_name {
         Some(name) => name == &monitor.name,
         None => true,
     };
 
+    // the area below the bar, which a window that respects the bar is placed in
+    let screen = Region {
+        x: 0.0,
+        y: 0.0,
+        width: monitor.width as f32,
+        height: monitor.height as f32 - bar::reserved(),
+    };
+
+    // Only render overlay panels on the active monitor
+    if !show_on_this_monitor {
+        return empty(screen);
+    }
+
     let any_panel_open = overlay.power_menu.shown
-        || (overlay.launcher.shown && show_launcher)
+        || overlay.launcher.shown
         || overlay.app_menu.shown
         || overlay.control_center.shown
         || overlay.audio_control.shown
@@ -67,24 +85,14 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
         theme::target()
     };
 
-    // the area below the bar, which a window that respects the bar is placed in
-    let screen = Region {
-        x: 0.0,
-        y: 0.0,
-        width: monitor.width as f32,
-        height: monitor.height as f32 - bar::reserved(),
-    };
-
     let mut panels: Vec<PanelView> = Vec::new();
 
     if let Some(panel) = power_menu::view(&overlay, &theme, screen) {
         panels.push(panel);
     }
 
-    if show_launcher {
-        if let Some(panel) = launcher::view(&overlay, &theme, screen, &monitor.name) {
-            panels.push(panel);
-        }
+    if let Some(panel) = launcher::view(&overlay, &theme, screen, &monitor.name) {
+        panels.push(panel);
     }
 
     if let Some(panel) = app_menu::view(&overlay, &theme, screen) {
@@ -123,7 +131,7 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
      * the launcher, app_menu and a password field are typed into, so they take the
      * keyboard while open; the utility center takes it once clicked, for escape
      */
-    let keyboard = if (overlay.launcher.shown && show_launcher)
+    let keyboard = if overlay.launcher.shown
         || overlay.app_menu.shown
         || utility::wants_keyboard(&overlay) {
         Keyboard::Exclusive

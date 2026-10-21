@@ -618,8 +618,9 @@ fn query_power_devices() -> (bool, Option<PowerDevice>, Vec<PowerDevice>) {
     (ac_online, laptop_battery, peripherals)
 }
 
-pub fn ipc(_arguments: &[String]) -> String {
-    Overlay::toggle_power_devices();
+pub fn ipc(arguments: &[String]) -> String {
+    let monitor_arg = arguments.iter().find(|arg| !matches!(arg.as_str(), "toggle" | "show" | "hide")).map(String::as_str);
+    Overlay::toggle_power_devices(monitor_arg);
     String::from("ok")
 }
 

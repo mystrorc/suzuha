@@ -34,17 +34,17 @@ pub fn view(monitor: &Monitor, theme: &Theme, width: f32) -> Row {
     let mut core_segments: Vec<(f32, Box<dyn Widget>)> = Vec::new();
 
     if show_audio {
-        let (w, seg) = audio_segment(theme);
+        let (w, seg) = audio_segment(monitor, theme);
         core_segments.push((w, Box::new(seg)));
     }
 
     if show_clock {
-        let (w, seg) = clock_segment(theme);
+        let (w, seg) = clock_segment(monitor, theme);
         core_segments.push((w, Box::new(seg)));
     }
 
     if show_memory {
-        let (w, seg) = system::memory_segment(theme);
+        let (w, seg) = system::memory_segment(monitor, theme);
         core_segments.push((w, Box::new(seg)));
     }
 
@@ -84,7 +84,7 @@ pub fn view(monitor: &Monitor, theme: &Theme, width: f32) -> Row {
     }
 
     if show_media {
-        if let Some(media) = workspaces::media(theme) {
+        if let Some(media) = workspaces::media(monitor, theme) {
             left_items.push(Box::new(media));
         }
     }
@@ -93,7 +93,7 @@ pub fn view(monitor: &Monitor, theme: &Theme, width: f32) -> Row {
     let mut right_items: Vec<Box<dyn Widget>> = Vec::new();
 
     if show_battery {
-        if let Some(battery) = system::battery(theme) {
+        if let Some(battery) = system::battery(monitor, theme) {
             right_items.push(Box::new(battery));
         }
     }
@@ -138,7 +138,7 @@ pub fn view(monitor: &Monitor, theme: &Theme, width: f32) -> Row {
 }
 
 // Volume segment inside the locked center pill
-fn audio_segment(theme: &Theme) -> (f32, Rectangle) {
+fn audio_segment(monitor: &Monitor, theme: &Theme) -> (f32, Rectangle) {
     let audio = Audio::read();
     let volume = audio.volume();
     let muted = audio.muted();
@@ -186,22 +186,23 @@ fn audio_segment(theme: &Theme) -> (f32, Rectangle) {
 
     let width = RING_SIZE + 6.0 + text_w + 16.0;
 
+    let monitor_name = monitor.name.clone();
     let seg = Rectangle::new()
         .width(width)
         .height(Parent)
         .cursor(Pointer)
         .on_scroll(scroll_volume)
-        .on_click(|button| match button {
-            Button::Left => Overlay::toggle_control_center(),
+        .on_click(move |button| match button {
+            Button::Left => Overlay::toggle_control_center(Some(&monitor_name)),
             Button::Right => {
                 let is_eq_open = {
                     let o = Overlay::read();
                     o.control_center.shown && o.center_tab == 1 && o.control_tab == 1
                 };
                 if is_eq_open {
-                    Overlay::toggle_control_center();
+                    Overlay::toggle_control_center(Some(&monitor_name));
                 } else {
-                    Overlay::open_control_tab(1);
+                    Overlay::open_control_tab(1, Some(&monitor_name));
                 }
             }
             _ => {}
@@ -213,7 +214,7 @@ fn audio_segment(theme: &Theme) -> (f32, Rectangle) {
 }
 
 // Clock segment inside the locked center pill: Left click pulls down center pulldown on Calendar tab
-fn clock_segment(theme: &Theme) -> (f32, Rectangle) {
+fn clock_segment(monitor: &Monitor, theme: &Theme) -> (f32, Rectangle) {
     let clock = Clock::read();
     let settings = Settings::read();
 
@@ -223,7 +224,7 @@ fn clock_segment(theme: &Theme) -> (f32, Rectangle) {
     let text = match display {
         "time" => clock.time(seconds),
         "date" => String::from(clock.date()),
-        _ => format!("{}  •  {}", clock.time(seconds), clock.date()),
+        _ => format!("{}  \u{2022}  {}", clock.time(seconds), clock.date()),
     };
 
     drop(settings);
@@ -231,12 +232,13 @@ fn clock_segment(theme: &Theme) -> (f32, Rectangle) {
     let text_width = pill::text_width(&text, 14.0);
     let width = text_width + 20.0;
 
+    let monitor_name = monitor.name.clone();
     let seg = Rectangle::new()
         .width(width)
         .height(Parent)
         .cursor(Pointer)
-        .on_click(|button| match button {
-            Button::Left => Overlay::toggle_calendar(),
+        .on_click(move |button| match button {
+            Button::Left => Overlay::toggle_calendar(Some(&monitor_name)),
             _ => {}
         })
         .align_child(Center, Center)

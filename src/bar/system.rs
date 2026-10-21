@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 
 use amane::{
-    Battery, Button, Center, Color, End, Full, Memory, Padding, Parent, Pointer, Rectangle, Row, Service,
+    Battery, Button, Center, Color, End, Full, Memory, Monitor, Padding, Parent, Pointer, Rectangle, Row, Service,
     SpaceBetween, Stack, Text, Widget, children,
 };
 
@@ -38,17 +38,17 @@ thread_local! {
 }
 
 // Right section of the bar: System Tray and Power Menu button
-pub fn view(theme: &Theme, width: f32) -> Row {
+pub fn view(monitor: &Monitor, theme: &Theme, width: f32) -> Row {
     let settings = Settings::read();
 
     let mut items: Vec<Box<dyn Widget>> = Vec::new();
 
     if settings.flag("bar_tray") {
-        items.push(Box::new(tray(theme)));
+        items.push(Box::new(tray(monitor, theme)));
     }
 
     if settings.flag("bar_power") {
-        items.push(Box::new(power_button(theme)));
+        items.push(Box::new(power_button(monitor, theme)));
     }
 
     items.push(Box::new(Rectangle::new().width(EDGE).height(1.0)));
@@ -61,20 +61,21 @@ pub fn view(theme: &Theme, width: f32) -> Row {
         .align(Center)
 }
 
-fn power_button(theme: &Theme) -> Rectangle {
+fn power_button(monitor: &Monitor, theme: &Theme) -> Rectangle {
     let icon = Text::new("\u{f011}") // Nerd Font power icon
         .size(15.0)
         .font(fonts::NERD)
         .tight()
         .color(theme.danger);
 
+    let monitor_name = monitor.name.clone();
     Rectangle::new()
         .width(32.0)
         .height(32.0)
         .radius(Full)
         .fill(theme.surface)
         .cursor(Pointer)
-        .on_click(|_| Overlay::toggle_power_menu())
+        .on_click(move |_| Overlay::toggle_power_menu(Some(&monitor_name)))
         .align_child(Center, Center)
         .child(icon)
 }
@@ -97,7 +98,7 @@ fn indicator(value: f32, color: Color, icon: &str, text: &str, theme: &Theme) ->
 }
 
 // Only shown when a battery is present and NOT on the charger (neither charging nor full/plugged-in)
-pub fn battery(theme: &Theme) -> Option<Rectangle> {
+pub fn battery(monitor: &Monitor, theme: &Theme) -> Option<Rectangle> {
     let battery = Battery::read();
 
     if !battery.present() || battery.charging() || battery.full() {
@@ -123,11 +124,12 @@ pub fn battery(theme: &Theme) -> Option<Rectangle> {
     let text_w = pill::text_width(&text, 14.0);
     let width = RING_SIZE + 6.0 + text_w + 16.0;
 
+    let monitor_name = monitor.name.clone();
     Some(
         pill::view(width, theme.surface)
             .cursor(Pointer)
-            .on_click(|button| match button {
-                Button::Left => Overlay::toggle_power_devices(),
+            .on_click(move |button| match button {
+                Button::Left => Overlay::toggle_power_devices(Some(&monitor_name)),
                 _ => {}
             })
             .align_child(Center, Center)
@@ -156,7 +158,7 @@ fn battery_icon(percent: u8, charging: bool) -> &'static str {
 }
 
 // Segment inside the locked center pill for System (Memory)
-pub fn memory_segment(theme: &Theme) -> (f32, Rectangle) {
+pub fn memory_segment(monitor: &Monitor, theme: &Theme) -> (f32, Rectangle) {
     let memory = Memory::read();
 
     let usage = f32::from(memory.percent()) / 100.0;
@@ -179,12 +181,13 @@ pub fn memory_segment(theme: &Theme) -> (f32, Rectangle) {
     let text_w = pill::text_width(&text, 14.0);
     let width = RING_SIZE + 6.0 + text_w + 16.0;
 
+    let monitor_name = monitor.name.clone();
     let seg = Rectangle::new()
         .width(width)
         .height(Parent)
         .cursor(Pointer)
-        .on_click(|button| match button {
-            Button::Left => Overlay::toggle_sysmon(),
+        .on_click(move |button| match button {
+            Button::Left => Overlay::toggle_sysmon(Some(&monitor_name)),
             _ => {}
         })
         .align_child(Center, Center)
@@ -194,7 +197,7 @@ pub fn memory_segment(theme: &Theme) -> (f32, Rectangle) {
 }
 
 // opens the utility center, and grows to the left with the time while a recording runs
-fn tray(theme: &Theme) -> Rectangle {
+fn tray(monitor: &Monitor, theme: &Theme) -> Rectangle {
     let mut icons: Vec<Box<dyn Widget>> = Vec::new();
 
     for icon in TRAY_ICONS {
@@ -213,10 +216,11 @@ fn tray(theme: &Theme) -> Rectangle {
 
     let content = Row::new(children![recording, row]).align(Center);
 
+    let monitor_name = monitor.name.clone();
     pill::view(TRAY_WIDTH + extra, theme.accent)
         .clip()
         .cursor(Pointer)
-        .on_click(|_| Overlay::toggle_utility())
+        .on_click(move |_| Overlay::toggle_utility(Some(&monitor_name)))
         .align_child(End, Center)
         .padding(Padding {
             top: 0.0,
@@ -254,7 +258,7 @@ fn recording(theme: &Theme) -> (f32, Rectangle) {
         let segment = Rectangle::new()
             .width(extra)
             .height(Parent)
-            .opacity(extra / full)
+            .opacity(if full > 0.0 { extra / full } else { 0.0 })
             .align_child(Center, Center)
             .child(
                 Row::new(children![dot, pill::label(text, 13.0, theme.on_accent)])

@@ -201,7 +201,7 @@ fn cpu_card(theme: &Theme, data: &SysmonData, width: f32, height: f32) -> Rectan
 
     let temp_str = Sensors::read()
         .cpu
-        .map(|t| format!(" • {t}°C"))
+        .map(|t| format!(" \u{2022} {t}\u{b0}C"))
         .unwrap_or_default();
 
     let stat = Text::new(format!("{percent}%{temp_str}"))
@@ -428,7 +428,8 @@ fn read_top_processes(limit: usize) -> Vec<ProcessInfo> {
     procs
 }
 
-pub fn ipc(_arguments: &[String]) -> String {
-    Overlay::toggle_sysmon();
+pub fn ipc(arguments: &[String]) -> String {
+    let monitor_arg = arguments.iter().find(|arg| !matches!(arg.as_str(), "toggle" | "show" | "hide")).map(String::as_str);
+    Overlay::toggle_sysmon(monitor_arg);
     String::from("ok")
 }

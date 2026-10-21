@@ -37,6 +37,7 @@ impl Panel {
         self.progress.to(0.0);
     }
 
+    #[allow(dead_code)]
     pub fn toggle(&mut self) {
         if self.shown {
             self.hide();

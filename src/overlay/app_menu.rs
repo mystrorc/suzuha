@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+
 use amane::{
     Apps, Center, Color, Column, Image, Key, Padding, Pointer, Rectangle, Row,
     Scroll, Service, Start, Text, TextInput, Weight, Widget, children,
@@ -49,6 +51,55 @@ struct AppItem {
     name: String,
     category: &'static str,
     description: Option<String>,
+}
+
+#[derive(Clone)]
+struct CachedApp {
+    index: usize,
+    name: String,
+    category: &'static str,
+    description: Option<String>,
+    search_haystack: String,
+}
+
+thread_local! {
+    static CACHED_MENU_APPS: RefCell<Option<(usize, Vec<CachedApp>)>> = const { RefCell::new(None) };
+}
+
+fn get_cached_menu_apps() -> Vec<CachedApp> {
+    let apps = Apps::read();
+    let list = apps.list();
+    let count = list.len();
+
+    CACHED_MENU_APPS.with_borrow_mut(|cache| {
+        if let Some((cached_count, items)) = cache.as_ref() {
+            if *cached_count == count {
+                return items.clone();
+            }
+        }
+
+        let mut items = Vec::with_capacity(count);
+        for (index, app) in list.iter().enumerate() {
+            let name = app.name();
+            let desc = app.description();
+            let exec = app.exec();
+            let category = categorize(name, desc, exec);
+
+            let desc_str = desc.map(String::from);
+            let search_haystack = format!("{} {} {}", name, desc.unwrap_or(""), category).to_lowercase();
+
+            items.push(CachedApp {
+                index,
+                name: String::from(name),
+                category,
+                description: desc_str,
+                search_haystack,
+            });
+        }
+
+        *cache = Some((count, items.clone()));
+        items
+    })
 }
 
 // none while fully hidden
@@ -371,7 +422,7 @@ fn tile(
             if let Some(app) = apps.list().get(app_index) {
                 app.launch();
             }
-            Overlay::toggle_app_menu();
+            Overlay::toggle_app_menu(None);
         })
         .align_child(Start, Center)
         .child(row)
@@ -417,7 +468,7 @@ fn footer(theme: &Theme, count: usize, width: f32) -> Row {
         .font(fonts::BODY)
         .color(theme.muted_text);
 
-    let tip = Text::new("Press Esc to close  •  Click to launch")
+    let tip = Text::new("Press Esc to close  \u{2022}  Click to launch")
         .size(11.0)
         .font(fonts::BODY)
         .color(theme.muted_text);
@@ -440,7 +491,7 @@ fn scrolled(scroll: Scroll) {
 }
 
 fn filtered_apps(overlay: &Overlay) -> Vec<AppItem> {
-    let apps = Apps::read();
+    let cached = get_cached_menu_apps();
     let search = overlay.app_menu_query.trim().to_lowercase();
     let cat_filter = overlay.app_menu_category;
 
@@ -452,32 +503,20 @@ fn filtered_apps(overlay: &Overlay) -> Vec<AppItem> {
 
     let mut result = Vec::new();
 
-    for (index, app) in apps.list().iter().enumerate() {
-        let name = app.name();
-        let desc = app.description();
-        let exec = app.exec();
-
-        let category = categorize(name, desc, exec);
-
-        if target_cat != "All" && category != target_cat {
+    for item in cached {
+        if target_cat != "All" && item.category != target_cat {
             continue;
         }
 
-        if !search.is_empty() {
-            let matches_name = name.to_lowercase().contains(&search);
-            let matches_desc = desc.map(|d| d.to_lowercase().contains(&search)).unwrap_or(false);
-            let matches_cat = category.to_lowercase().contains(&search);
-
-            if !matches_name && !matches_desc && !matches_cat {
-                continue;
-            }
+        if !search.is_empty() && !item.search_haystack.contains(&search) {
+            continue;
         }
 
         result.push(AppItem {
-            index,
-            name: String::from(name),
-            category,
-            description: desc.map(String::from),
+            index: item.index,
+            name: item.name,
+            category: item.category,
+            description: item.description,
         });
     }
 
@@ -542,7 +581,7 @@ fn launch_first_result() {
         if let Some(app) = all_apps.list().get(first.index) {
             app.launch();
         }
-        Overlay::toggle_app_menu();
+        Overlay::toggle_app_menu(None);
     }
 }
 
@@ -571,10 +610,12 @@ pub fn key_pressed(key: Key) {
 
 pub fn ipc(arguments: &[String]) -> String {
     let command = arguments.first().map(String::as_str).unwrap_or("toggle");
+    let monitor_arg = arguments.get(1).map(String::as_str);
 
     match command {
         "show" => {
             let mut overlay = Overlay::write();
+            overlay.set_active_monitor(monitor_arg);
             overlay.app_menu_query.clear();
             overlay.app_menu_category = 0;
             overlay.app_menu_scroll = 0.0;
@@ -582,7 +623,7 @@ pub fn ipc(arguments: &[String]) -> String {
             overlay.app_menu.show();
         }
         "hide" => Overlay::write().app_menu.hide(),
-        _ => Overlay::toggle_app_menu(),
+        _ => Overlay::toggle_app_menu(monitor_arg),
     }
 
     String::from("ok")

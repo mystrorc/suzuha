@@ -208,8 +208,10 @@ pub fn ipc(arguments: &[String]) -> String {
         _ => !shown,
     };
 
+    let monitor_arg = arguments.get(2).map(String::as_str);
+
     if wanted != shown {
-        Overlay::toggle_utility();
+        Overlay::toggle_utility(monitor_arg);
     }
 
     String::from("ok")

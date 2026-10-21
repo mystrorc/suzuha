@@ -74,9 +74,9 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
     let center_width = (total_width - side_width * 2.0).max(0.0);
 
     let sections = Row::new(children![
-        workspaces::view(&theme, side_width),
+        workspaces::view(monitor, &theme, side_width),
         center::view(monitor, &theme, center_width),
-        system::view(&theme, side_width),
+        system::view(monitor, &theme, side_width),
     ]);
 
     let content = Rectangle::new()

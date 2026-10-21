@@ -31,6 +31,7 @@ pub struct Overlay {
 
     pub launcher: Panel,
     pub launcher_monitor: Option<String>,
+    pub active_monitor: Option<String>,
 
     pub app_menu: Panel,
     pub app_menu_query: String,
@@ -107,6 +108,7 @@ impl Service for Overlay {
             control_tab: 0,
             launcher: Panel::new(),
             launcher_monitor: None,
+            active_monitor: None,
             app_menu: Panel::new(),
             app_menu_query: String::new(),
             app_menu_category: 0,
@@ -142,8 +144,30 @@ impl Service for Overlay {
 }
 
 impl Overlay {
+    pub fn focused_monitor() -> Option<String> {
+        amane::Workspaces::read()
+            .list()
+            .iter()
+            .find(|w| w.focused())
+            .and_then(|w| w.output().map(String::from))
+    }
+
+    pub fn set_active_monitor(&mut self, monitor: Option<&str>) {
+        if let Some(name) = monitor {
+            self.active_monitor = Some(name.to_string());
+        } else if let Some(focused) = Self::focused_monitor() {
+            self.active_monitor = Some(focused);
+        } else if self.active_monitor.is_none() {
+            self.active_monitor = amane::Workspaces::read()
+                .list()
+                .first()
+                .and_then(|w| w.output().map(String::from));
+        }
+        self.launcher_monitor = self.active_monitor.clone();
+    }
+
     // only one panel is out at a time
-    pub fn toggle_power_menu() {
+    pub fn toggle_power_menu(monitor: Option<&str>) {
         let mut overlay = Self::write();
 
         overlay.launcher.hide();
@@ -153,7 +177,13 @@ impl Overlay {
         overlay.power_devices.hide();
         overlay.audio_control.hide();
         utility::close(&mut overlay);
-        overlay.power_menu.toggle();
+
+        if overlay.power_menu.shown {
+            overlay.power_menu.hide();
+        } else {
+            overlay.set_active_monitor(monitor);
+            overlay.power_menu.show();
+        }
     }
 
     #[allow(dead_code)]
@@ -161,7 +191,7 @@ impl Overlay {
         Self::write().power_menu.hide();
     }
 
-    pub fn toggle_app_menu() {
+    pub fn toggle_app_menu(monitor: Option<&str>) {
         let mut overlay = Self::write();
 
         overlay.launcher.hide();
@@ -175,6 +205,7 @@ impl Overlay {
         if overlay.app_menu.shown {
             overlay.app_menu.hide();
         } else {
+            overlay.set_active_monitor(monitor);
             overlay.app_menu_query.clear();
             overlay.app_menu_category = 0;
             overlay.app_menu_scroll = 0.0;
@@ -189,7 +220,7 @@ impl Overlay {
         Self::write().app_menu.hide();
     }
 
-    pub fn toggle_utility() {
+    pub fn toggle_utility(monitor: Option<&str>) {
         let mut overlay = Self::write();
 
         overlay.launcher.hide();
@@ -202,12 +233,11 @@ impl Overlay {
 
         if overlay.utility.shown {
             utility::close(&mut overlay);
-
             return;
         }
 
+        overlay.set_active_monitor(monitor);
         overlay.utility.show();
-
         utility::opened(&mut overlay);
     }
 
@@ -221,8 +251,9 @@ impl Overlay {
         overlay.control_tab = tab;
     }
 
-    pub fn open_control_tab(tab: usize) {
+    pub fn open_control_tab(tab: usize, monitor: Option<&str>) {
         let mut overlay = Self::write();
+        overlay.set_active_monitor(monitor);
         overlay.center_tab = 1;
         overlay.control_tab = tab;
         overlay.launcher.hide();
@@ -235,7 +266,7 @@ impl Overlay {
         overlay.control_center.show();
     }
 
-    pub fn toggle_center_section(section: usize) {
+    pub fn toggle_center_section(section: usize, monitor: Option<&str>) {
         let mut overlay = Self::write();
 
         overlay.launcher.hide();
@@ -249,25 +280,26 @@ impl Overlay {
         if overlay.control_center.shown && overlay.center_tab == section {
             overlay.control_center.hide();
         } else {
+            overlay.set_active_monitor(monitor);
             overlay.center_tab = section;
             overlay.control_center.show();
         }
     }
 
-    pub fn toggle_control_center() {
-        Self::toggle_center_section(1);
+    pub fn toggle_control_center(monitor: Option<&str>) {
+        Self::toggle_center_section(1, monitor);
     }
 
-    pub fn toggle_sysmon() {
-        Self::toggle_center_section(0);
+    pub fn toggle_sysmon(monitor: Option<&str>) {
+        Self::toggle_center_section(0, monitor);
     }
 
-    pub fn toggle_calendar() {
-        Self::toggle_center_section(2);
+    pub fn toggle_calendar(monitor: Option<&str>) {
+        Self::toggle_center_section(2, monitor);
     }
 
-    pub fn toggle_power_devices() {
-        Self::toggle_center_section(3);
+    pub fn toggle_power_devices(monitor: Option<&str>) {
+        Self::toggle_center_section(3, monitor);
     }
 
     #[allow(dead_code)]
@@ -276,7 +308,7 @@ impl Overlay {
     }
 
     #[allow(dead_code)]
-    pub fn toggle_audio_control() {
+    pub fn toggle_audio_control(monitor: Option<&str>) {
         let mut overlay = Self::write();
 
         overlay.launcher.hide();
@@ -286,7 +318,13 @@ impl Overlay {
         overlay.sysmon.hide();
         overlay.power_devices.hide();
         utility::close(&mut overlay);
-        overlay.audio_control.toggle();
+
+        if overlay.audio_control.shown {
+            overlay.audio_control.hide();
+        } else {
+            overlay.set_active_monitor(monitor);
+            overlay.audio_control.show();
+        }
     }
 
     #[allow(dead_code)]

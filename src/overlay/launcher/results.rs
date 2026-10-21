@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::env;
 
 use amane::{Apps, Service};
@@ -70,30 +71,69 @@ pub fn find(query: &str, sessions: &[String]) -> Vec<Entry> {
     apps(&query.trim().to_lowercase())
 }
 
+#[derive(Clone)]
+struct CachedApp {
+    index: usize,
+    name: String,
+    name_lower: String,
+    description: Option<String>,
+}
+
+thread_local! {
+    static CACHED_APPS: RefCell<Option<(usize, Vec<CachedApp>)>> = const { RefCell::new(None) };
+}
+
+fn get_cached_apps() -> Vec<CachedApp> {
+    let apps = Apps::read();
+    let list = apps.list();
+    let count = list.len();
+
+    CACHED_APPS.with_borrow_mut(|cache| {
+        if let Some((cached_count, items)) = cache.as_ref() {
+            if *cached_count == count {
+                return items.clone();
+            }
+        }
+
+        let mut items = Vec::with_capacity(count);
+        for (index, app) in list.iter().enumerate() {
+            let name = app.name();
+            items.push(CachedApp {
+                index,
+                name: String::from(name),
+                name_lower: name.to_lowercase(),
+                description: app.description().map(String::from),
+            });
+        }
+
+        *cache = Some((count, items.clone()));
+        items
+    })
+}
+
 // already sorted by name, so only the filter is left
 fn apps(search: &str) -> Vec<Entry> {
-    let apps = Apps::read();
-
+    let cached = get_cached_apps();
     let described = Settings::read().flag("launcher_descriptions");
 
     let mut found = Vec::new();
 
-    for (index, app) in apps.list().iter().enumerate() {
-        if !app.name().to_lowercase().contains(search) {
+    for app in cached {
+        if !search.is_empty() && !app.name_lower.contains(search) {
             continue;
         }
 
         let description = if described {
-            app.description().map(String::from)
+            app.description
         } else {
             None
         };
 
         found.push(Entry {
-            name: String::from(app.name()),
+            name: app.name,
             description,
             glyph: None,
-            kind: Kind::App(index),
+            kind: Kind::App(app.index),
         });
     }
 
