@@ -15,7 +15,7 @@ use crate::theme::Theme;
 
 // the memory icon, and the notification, wifi and bluetooth tray icons
 const MEMORY_ICON: &str = "󰍛";
-const TRAY_ICONS: [&str; 3] = ["󰂚", "󱚩", "󰂯"];
+const TRAY_ICONS: [&str; 3] = ["󰂚", "", "󰂯"];
 
 const RING_SIZE: f32 = 24.0;
 const RING_THICKNESS: f32 = 3.0;
