@@ -1,4 +1,5 @@
 mod results;
+pub mod shortcuts;
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
@@ -270,7 +271,21 @@ fn row(overlay: &Overlay, theme: &Theme, entry: &Entry, index: usize, width: f32
             .elide(),
     )];
 
-    if let Some(description) = &entry.description {
+    if let Some(shortcut) = &entry.shortcut {
+        let subtext = if let Some(description) = &entry.description {
+            format!("󰌌 {shortcut}  •  {description}")
+        } else {
+            format!("󰌌 {shortcut}")
+        };
+
+        let label = Text::new(&subtext)
+            .size(12.0)
+            .font(fonts::BODY)
+            .color(theme.accent)
+            .elide();
+
+        labels.push(Box::new(label));
+    } else if let Some(description) = &entry.description {
         let description = Text::new(description)
             .size(12.0)
             .font(fonts::BODY)
@@ -528,10 +543,20 @@ fn launch_selected() {
 
     match &entry.kind {
         Kind::App(index) => {
-            Apps::read().list()[*index].launch();
+            let apps = Apps::read();
+            let app = &apps.list()[*index];
+            let icon = app.icon().unwrap_or("").to_string();
+            app.launch();
+            drop(apps);
 
             if close {
                 overlay.launcher.hide();
+            }
+
+            if let Some(shortcut) = &entry.shortcut {
+                shortcuts::notify_shortcut_hint(&entry.name, shortcut, &icon);
+            } else {
+                shortcuts::record_unmapped_and_notify_if_needed(&entry.name, &icon);
             }
         }
 

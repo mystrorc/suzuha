@@ -1,3 +1,5 @@
+use super::shortcuts;
+
 use std::cell::RefCell;
 use std::env;
 
@@ -38,6 +40,9 @@ pub struct Entry {
     // an app's description, shown under its name when turned on
     pub description: Option<String>,
 
+    // shortcut chord from niri config if available
+    pub shortcut: Option<String>,
+
     // a nerd font glyph, for entries that have no app icon
     pub glyph: Option<&'static str>,
 
@@ -76,6 +81,7 @@ struct CachedApp {
     index: usize,
     name: String,
     name_lower: String,
+    exec: String,
     description: Option<String>,
 }
 
@@ -102,6 +108,7 @@ fn get_cached_apps() -> Vec<CachedApp> {
                 index,
                 name: String::from(name),
                 name_lower: name.to_lowercase(),
+                exec: String::from(app.exec()),
                 description: app.description().map(String::from),
             });
         }
@@ -129,9 +136,12 @@ fn apps(search: &str) -> Vec<Entry> {
             None
         };
 
+        let shortcut = shortcuts::get_shortcut(&app.name, &app.exec);
+
         found.push(Entry {
             name: app.name,
             description,
+            shortcut,
             glyph: None,
             kind: Kind::App(app.index),
         });
@@ -145,6 +155,7 @@ fn apps(search: &str) -> Vec<Entry> {
         || "amane".contains(search);
 
     if amane_match {
+        let shortcut = shortcuts::get_shortcut("Amane Settings", "amane settings");
         found.push(Entry {
             name: String::from("Amane Settings"),
             description: if described {
@@ -152,6 +163,7 @@ fn apps(search: &str) -> Vec<Entry> {
             } else {
                 None
             },
+            shortcut,
             glyph: Some("\u{f0493}"),
             kind: Kind::Settings,
         });
@@ -184,9 +196,12 @@ fn commands(search: &str) -> Vec<Entry> {
             continue;
         }
 
+        let shortcut = shortcuts::get_shortcut(name, name);
+
         found.push(Entry {
             name: String::from(name),
             description: None,
+            shortcut,
             glyph: Some(glyph),
             kind,
         });
@@ -206,6 +221,7 @@ fn tmux(search: &str, sessions: &[String]) -> Vec<Entry> {
         found.push(Entry {
             name: session.clone(),
             description: None,
+            shortcut: None,
             glyph: None,
             kind: Kind::Tmux(session.clone()),
         });
@@ -230,7 +246,7 @@ pub fn read_sessions() -> Vec<String> {
     sessions
 }
 
-// false when there is no $TERMINAL to attach in
+// false when there is no  to attach in
 pub fn attach(session: &str) -> bool {
     let Ok(terminal) = env::var("TERMINAL") else {
         return false;
