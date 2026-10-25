@@ -51,14 +51,17 @@ fn parse_config(content: &str) -> HashMap<String, Vec<String>> {
             None => continue,
         };
 
-        let chord = before_brace
+        let chord_raw = before_brace
             .split_whitespace()
             .next()
             .unwrap_or("");
 
-        if chord.is_empty() {
+        if chord_raw.is_empty() {
             continue;
         }
+
+        // Change "Mod" to "Super" for user-friendly shortcut display
+        let chord = chord_raw.replace("Mod", "Super").replace("mod", "Super");
 
         let title = if let Some(t_start) = trimmed.find("hotkey-overlay-title=\"") {
             let rem = &trimmed[t_start + 22..];
@@ -106,6 +109,13 @@ fn parse_config(content: &str) -> HashMap<String, Vec<String>> {
 
             if !bin.is_empty() && bin != "sh" && bin != "bash" {
                 targets.push(bin.clone());
+                if bin == "brave-origin" || bin == "brave-origin-stable" || bin == "brave" {
+                    targets.push("brave-origin".to_string());
+                    targets.push("brave-origin-stable".to_string());
+                    targets.push("brave".to_string());
+                    targets.push("brave origin".to_string());
+                    targets.push("brave-browser".to_string());
+                }
             }
 
             if bin == "amane" && quoted_strings.len() >= 4 && quoted_strings[1] == "ipc" && quoted_strings[2] == "call" {
@@ -143,8 +153,8 @@ fn parse_config(content: &str) -> HashMap<String, Vec<String>> {
 
         for target in targets {
             let entry = map.entry(target).or_default();
-            if !entry.contains(&chord.to_string()) {
-                entry.push(chord.to_string());
+            if !entry.contains(&chord) {
+                entry.push(chord.clone());
             }
         }
     }
@@ -180,7 +190,12 @@ pub fn get_shortcut(app_name: &str, exec: &str) -> Option<String> {
             .and_then(|s| s.to_str())
             .unwrap_or(tokens[0])
             .to_lowercase();
-        candidate_bins.push(first_bin);
+        candidate_bins.push(first_bin.clone());
+        if first_bin == "brave-origin-stable" || first_bin == "brave-origin" || first_bin == "brave" {
+            candidate_bins.push("brave-origin".to_string());
+            candidate_bins.push("brave-origin-stable".to_string());
+            candidate_bins.push("brave".to_string());
+        }
     }
 
     let name_clean = app_name.to_lowercase();
