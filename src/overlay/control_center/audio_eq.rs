@@ -10,8 +10,9 @@ use crate::overlay::Overlay;
 use crate::overlay::audio_control::{AudioDevice, AudioDevices};
 use crate::theme::{self, Theme};
 
-pub const PRESETS: [&str; 8] = [
+pub const PRESETS: [&str; 10] = [
     "Flat",
+    "Sony WH-1000XM3",
     "Bass Boost",
     "Vocal Clarity",
     "Treble Boost",
@@ -19,10 +20,12 @@ pub const PRESETS: [&str; 8] = [
     "Electronic",
     "Classical",
     "Acoustic",
+    "Razor Kraken Tournament Edition",
 ];
 
-pub const PRESET_GAINS: [[f32; 10]; 8] = [
+pub const PRESET_GAINS: [[f32; 10]; 10] = [
     [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],          // Flat
+    [-10.6, -10.8, -13.0, -9.0, -8.4, -4.3, -2.4, -2.2, -6.1, -4.5], // Sony WH-1000XM3
     [7.0, 6.0, 5.0, 3.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],          // Bass Boost
     [-2.0, -1.0, 0.0, 2.0, 4.0, 4.0, 3.0, 1.0, 0.0, -1.0],      // Vocal Clarity
     [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 3.0, 5.0, 6.0, 7.0],          // Treble Boost
@@ -30,6 +33,7 @@ pub const PRESET_GAINS: [[f32; 10]; 8] = [
     [6.0, 5.0, 3.0, 0.0, -2.0, 2.0, 1.0, 3.0, 5.0, 6.0],       // Electronic
     [4.0, 3.0, 2.0, 1.0, -1.0, -1.0, 0.0, 2.0, 3.0, 4.0],       // Classical
     [3.0, 2.0, 1.0, 1.0, 2.0, 2.0, 3.0, 3.0, 3.0, 2.0],         // Acoustic
+    [-0.3, -7.2, -11.7, -10.5, -12.1, -3.2, -0.3, -0.3, -9.4, -6.1], // Razor Kraken Tournament Edition
 ];
 
 pub const BANDS: [&str; 10] = [
@@ -201,7 +205,11 @@ fn apply_all_gains_to_node(node_id: u32, gains: &[f32; 10]) {
 pub fn set_preset(preset: &str) {
     let preset_idx = PRESETS
         .iter()
-        .position(|&p| p.eq_ignore_ascii_case(preset))
+        .position(|&p| {
+            p.eq_ignore_ascii_case(preset)
+                || (preset.eq_ignore_ascii_case("Sony XM3") && p.contains("WH-1000XM3"))
+                || (preset.eq_ignore_ascii_case("XM3") && p.contains("WH-1000XM3"))
+        })
         .unwrap_or(0);
 
     let preset_name = PRESETS[preset_idx];
@@ -287,7 +295,7 @@ pub fn set_band_gain(band_idx: usize, gain: f32) {
         return;
     }
 
-    let clamped = (gain.clamp(-12.0, 12.0) * 2.0).round() / 2.0;
+    let clamped = (gain.clamp(-15.0, 15.0) * 2.0).round() / 2.0;
     let (node_id, is_bypassed) = {
         let mut eq = EqData::write();
         eq.gains_10[band_idx] = clamped;
@@ -701,7 +709,7 @@ fn slider_track(
 
     let travel = height - handle_h;
 
-    let norm = (gain.clamp(-12.0, 12.0) + 12.0) / 24.0;
+    let norm = (gain.clamp(-15.0, 15.0) + 15.0) / 30.0;
     let handle_y = (1.0 - norm) * travel;
 
     let bg = Rectangle::new()
@@ -740,7 +748,7 @@ fn slider_track(
         })
         .on_drag(move |point: Point| {
             let along = 1.0 - (point.y - handle_h / 2.0) / travel;
-            let wanted_db = along.clamp(0.0, 1.0) * 24.0 - 12.0;
+            let wanted_db = along.clamp(0.0, 1.0) * 30.0 - 15.0;
             set_band_gain(index, wanted_db);
         })
         .on_click(move |button: Button| {
