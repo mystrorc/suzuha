@@ -18,6 +18,21 @@ this is not a general-purpose shell. it's my own personal shell, and i'm not acc
 
 This fork ([`mystrorc/suzuha`](https://github.com/mystrorc/suzuha)) tracks upstream [`MystiaFin/suzuha`](https://github.com/MystiaFin/suzuha) while adding several major features, Omarchy plugin ports, appearance controls, and hardware integrations:
 
+- **Conditional Home Assistant Smart Home Pill & Flyout (`src/bar/home_assistant.rs`, `src/overlay/home_assistant.rs`):**
+  - **Conditional Bar Pill (`󰌵`):** Positioned immediately to the right of the battery pill; dynamically shown only when connected to the home network and Home Assistant is reachable. Displays an illuminated icon and active light count badge when lights are on.
+  - **Quick Action:** Right-click directly on the bar pill turns off all lights instantly without opening any menu.
+  - **Liquid Popover Flyout:** Left-clicking drops down an animated liquid flyout with live status, optimistic toggle switches for all discovered Home Assistant light entities, and an "All Off" shortcut.
+  - **Configuration:** Credentials securely stored in `~/.config/amane/homeassistant.json`.
+- **Redesigned Calendar & 7-Day Weather Pulldown (`src/overlay/control_center/calendar.rs`):**
+  - Expanded Control Center dropdown (820px) featuring a live 7-day weather forecast powered by Open-Meteo.
+  - Large digital clock card with day-of-week and month indicators.
+  - Local agenda and persistent reminders list backed by `~/.local/state/amane/reminders.json`.
+  - Monthly calendar grid with circular today highlights and active event indicator dots.
+- **Unified Media, Audio & Equalizer Tab (`src/overlay/control_center/media.rs`, `src/overlay/control_center/audio_eq.rs`):**
+  - Combined Now Playing and Audio & EQ into a unified interface.
+  - Left card: Compact volume and microphone faders side-by-side with PipeWire output sink selector and Wiremix integration directly underneath (input selector removed).
+  - Right card: Now Playing with album art, live Cava audio visualizer, seek waveform, and playback controls on top, and 10-band parametric equalizer on the bottom.
+  - Calibrated AutoEQ profiles for **Sony WH-1000XM3** and Razer Kraken TE, with an expanded `[-15.0 dB, +15.0 dB]` fader range.
 - **System Info & Hardware Overview (`src/settings/pages/user.rs`):**
   - Replaced the basic User Info page with a comprehensive **System info (`󰍹`)** tab.
   - Displays a Hero System Card with the distribution logo, OS name, kernel release, dynamic system uptime, and CPU summary.
