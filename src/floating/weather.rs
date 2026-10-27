@@ -18,6 +18,15 @@ const CHECK: Duration = Duration::from_secs(1);
 // set by the refresh button, the next check asks at once
 static REFRESH: AtomicBool = AtomicBool::new(false);
 
+#[derive(Clone, Default, PartialEq)]
+pub struct ForecastDay {
+    pub day_name: String,
+    pub code: u32,
+    pub high: f32,
+    pub low: f32,
+    pub is_today: bool,
+}
+
 // the latest reading for the saved location, empty until the first answer
 #[derive(Default, PartialEq)]
 pub struct Weather {
@@ -35,6 +44,8 @@ pub struct Weather {
 
     // the us air quality index, 0 to 500
     pub air_quality: Option<f32>,
+
+    pub forecast_7d: Vec<ForecastDay>,
 }
 
 /*
@@ -81,40 +92,48 @@ impl Weather {
     }
 
     pub fn condition(&self) -> &'static str {
-        match self.code {
-            Some(0) => "Clear sky",
-            Some(1) => "Mainly clear",
-            Some(2) => "Partly cloudy",
-            Some(3) => "Cloudy",
-            Some(45 | 48) => "Fog",
-            Some(51 | 53 | 55) => "Drizzle",
-            Some(56 | 57) => "Freezing drizzle",
-            Some(61) => "Light rain",
-            Some(63) => "Rain",
-            Some(65) => "Heavy rain",
-            Some(66 | 67) => "Freezing rain",
-            Some(71 | 73 | 75 | 77) => "Snow",
-            Some(80 | 81 | 82) => "Rain showers",
-            Some(85 | 86) => "Snow showers",
-            Some(95 | 96 | 99) => "Thunderstorm",
-            _ => "Weather",
-        }
+        weather_code_condition(self.code.unwrap_or(0))
     }
 
     // material design weather glyphs from the nerd font
     pub fn icon(&self) -> &'static str {
-        match self.code.unwrap_or(3) {
-            0 => "\u{f0599}",
-            1 | 2 => "\u{f0595}",
-            3 => "\u{f0590}",
-            45 | 48 => "\u{f0591}",
-            51..=57 | 80..=82 => "\u{f0596}",
-            61..=67 => "\u{f0597}",
-            71..=77 => "\u{f0598}",
-            85 | 86 => "\u{f0f36}",
-            95.. => "\u{f067e}",
-            _ => "\u{f0590}",
-        }
+        weather_code_icon(self.code.unwrap_or(0))
+    }
+}
+
+pub fn weather_code_condition(code: u32) -> &'static str {
+    match code {
+        0 => "Clear sky",
+        1 => "Mainly clear",
+        2 => "Partly cloudy",
+        3 => "Cloudy",
+        45 | 48 => "Fog",
+        51 | 53 | 55 => "Drizzle",
+        56 | 57 => "Freezing drizzle",
+        61 => "Light rain",
+        63 => "Rain",
+        65 => "Heavy rain",
+        66 | 67 => "Freezing rain",
+        71 | 73 | 75 | 77 => "Snow",
+        80 | 81 | 82 => "Rain showers",
+        85 | 86 => "Snow showers",
+        95 | 96 | 99 => "Thunderstorm",
+        _ => "Clear sky",
+    }
+}
+
+pub fn weather_code_icon(code: u32) -> &'static str {
+    match code {
+        0 => "\u{f0599}",
+        1 | 2 => "\u{f0595}",
+        3 => "\u{f0590}",
+        45 | 48 => "\u{f0591}",
+        51..=57 | 80..=82 => "\u{f0596}",
+        61..=67 => "\u{f0597}",
+        71..=77 => "\u{f0598}",
+        85 | 86 => "\u{f0f36}",
+        95.. => "\u{f067e}",
+        _ => "\u{f0599}",
     }
 }
 
@@ -144,26 +163,98 @@ fn fetch(request: &Request) -> Weather {
 
     let unit = if request.fahrenheit { "fahrenheit" } else { "celsius" };
 
-    let forecast = get(&format!(
+    let forecast_url = format!(
         "{FORECAST}?{coordinates}&current=temperature_2m,relative_humidity_2m,weather_code,uv_index\
-         &daily=temperature_2m_max,temperature_2m_min&temperature_unit={unit}\
-         &forecast_days=1&timezone=auto&format=csv"
-    ));
+         &daily=weather_code,temperature_2m_max,temperature_2m_min&temperature_unit={unit}\
+         &forecast_days=7&timezone=auto"
+    );
+
+    let forecast_json_text = amane::output(&format!("curl -sf --max-time 20 '{forecast_url}'"));
+    let json_val: Option<serde_json::Value> = serde_json::from_str(&forecast_json_text).ok();
+
+    let mut forecast_7d = Vec::new();
+    let mut temp = None;
+    let mut high = None;
+    let mut low = None;
+    let mut code = None;
+    let mut humidity = None;
+    let mut uv_index = None;
+
+    if let Some(val) = &json_val {
+        temp = val["current"]["temperature_2m"].as_f64().map(|f| f as f32);
+        code = val["current"]["weather_code"].as_u64().map(|u| u as u32);
+        humidity = val["current"]["relative_humidity_2m"].as_f64().map(|f| f as f32);
+        uv_index = val["current"]["uv_index"].as_f64().map(|f| f as f32);
+
+        if let (Some(times), Some(codes), Some(maxs), Some(mins)) = (
+            val["daily"]["time"].as_array(),
+            val["daily"]["weather_code"].as_array(),
+            val["daily"]["temperature_2m_max"].as_array(),
+            val["daily"]["temperature_2m_min"].as_array(),
+        ) {
+            for i in 0..times.len().min(7) {
+                let date_str = times[i].as_str().unwrap_or("");
+                let dcode = codes.get(i).and_then(|c| c.as_u64()).unwrap_or(0) as u32;
+                let dhigh = maxs.get(i).and_then(|m| m.as_f64()).unwrap_or(70.0) as f32;
+                let dlow = mins.get(i).and_then(|m| m.as_f64()).unwrap_or(50.0) as f32;
+
+                let day_name = if let Some((y, m, d)) = parse_ymd(date_str) {
+                    let days = crate::clock::days_since_1970(y, m, d);
+                    match days.rem_euclid(7) {
+                        0 => "Thu",
+                        1 => "Fri",
+                        2 => "Sat",
+                        3 => "Sun",
+                        4 => "Mon",
+                        5 => "Tue",
+                        _ => "Wed",
+                    }.to_string()
+                } else {
+                    format!("Day {}", i + 1)
+                };
+
+                forecast_7d.push(ForecastDay {
+                    day_name,
+                    code: dcode,
+                    high: dhigh,
+                    low: dlow,
+                    is_today: i == 0,
+                });
+            }
+        }
+    }
+
+    if let Some(first) = forecast_7d.first() {
+        if high.is_none() {
+            high = Some(first.high);
+        }
+        if low.is_none() {
+            low = Some(first.low);
+        }
+    }
 
     let air = get(&format!("{AIR_QUALITY}?{coordinates}&current=us_aqi&format=csv"));
-
     let number = |values: &HashMap<String, String>, name: &str| values.get(name)?.parse().ok();
 
     Weather {
         place: location.name.clone(),
-        temperature: number(&forecast, "temperature_2m"),
-        high: number(&forecast, "temperature_2m_max"),
-        low: number(&forecast, "temperature_2m_min"),
-        code: forecast.get("weather_code").and_then(|code| code.parse().ok()),
-        humidity: number(&forecast, "relative_humidity_2m"),
-        uv_index: number(&forecast, "uv_index"),
+        temperature: temp,
+        high,
+        low,
+        code,
+        humidity,
+        uv_index,
         air_quality: number(&air, "us_aqi"),
+        forecast_7d,
     }
+}
+
+fn parse_ymd(s: &str) -> Option<(i64, i64, i64)> {
+    let mut parts = s.split('-');
+    let y = parts.next()?.parse().ok()?;
+    let m = parts.next()?.parse().ok()?;
+    let d = parts.next()?.parse().ok()?;
+    Some((y, m, d))
 }
 
 // empty when offline; the next poll tries again

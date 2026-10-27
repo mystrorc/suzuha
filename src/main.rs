@@ -106,6 +106,7 @@ fn main() {
         .ipc("power_menu", overlay::power_menu::ipc)
         .ipc("utility", overlay::utility::ipc)
         .ipc("control", overlay::control_center::ipc)
+        .ipc("calendar", overlay::control_center::calendar::ipc)
         .ipc("sysmon", overlay::sysmon::ipc)
         .ipc("power", overlay::power_devices::ipc)
         .ipc("audio_control", overlay::audio_control::ipc)

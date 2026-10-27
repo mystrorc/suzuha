@@ -3,7 +3,7 @@ mod card;
 mod memory;
 mod placement;
 pub mod sensors;
-mod weather;
+pub mod weather;
 
 use std::collections::HashMap;
 use std::time::SystemTime;

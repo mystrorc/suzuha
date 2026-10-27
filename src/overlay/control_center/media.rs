@@ -1,11 +1,11 @@
 use std::time::Duration;
 
 use amane::{
-    Center, Column, End, Image, Media, MediaPlayer, Padding, Pointer, Rectangle, Row, Service,
-    Stack, Start, Text, Weight, Widget, children,
+    Center, Column, End, Image, Media, MediaPlayer, Padding, Pointer, Rectangle, Row,
+    Service, SpaceBetween, Stack, Start, Text, Weight, Widget, children,
 };
 
-use super::{art, player, visualizer, wave};
+use super::{art, audio_eq, player, visualizer, wave};
 use crate::fonts;
 use crate::motion::{self, FAST_SPATIAL};
 use crate::overlay::Overlay;
@@ -13,19 +13,17 @@ use crate::overlay::utility::{fade_target, hover};
 use crate::theme::{self, Theme};
 
 const RADIUS: f32 = 20.0;
-const ART_RADIUS: f32 = 16.0;
+const ART_RADIUS: f32 = 14.0;
 
-const PADDING: f32 = 18.0;
-const GAP: f32 = 16.0;
-const LINE_GAP: f32 = 8.0;
+const PADDING: f32 = 14.0;
+const GAP: f32 = 14.0;
+const LINE_GAP: f32 = 6.0;
 
-const TITLE_HEIGHT: f32 = 24.0;
-const ARTIST_HEIGHT: f32 = 18.0;
 const TIME_WIDTH: f32 = 30.0;
-const CONTROLS_HEIGHT: f32 = 48.0;
+const CONTROLS_HEIGHT: f32 = 38.0;
 
-const BUTTON: f32 = 38.0;
-const PLAY_BUTTON: f32 = 48.0;
+const BUTTON: f32 = 32.0;
+const PLAY_BUTTON: f32 = 40.0;
 
 const EMPTY_ICON: &str = "󰝚";
 const PREVIOUS_ICON: &str = "󰒮";
@@ -34,9 +32,9 @@ const PAUSE_ICON: &str = "󰏤";
 const NEXT_ICON: &str = "󰒭";
 
 // with several players open, a switch arrow sits on either side of the card
-const ARROW_WIDTH: f32 = 30.0;
-const ARROW_INSET: f32 = 10.0;
-const ARROWS_PADDING: f32 = 50.0;
+const ARROW_WIDTH: f32 = 26.0;
+const ARROW_INSET: f32 = 8.0;
+const ARROWS_PADDING: f32 = 38.0;
 
 // how far a switched card slides in from
 const SWITCH_DISTANCE: f32 = 28.0;
@@ -44,12 +42,10 @@ const SWITCH_DISTANCE: f32 = 28.0;
 const PREVIOUS_PLAYER_ICON: &str = "󰁍";
 const NEXT_PLAYER_ICON: &str = "󰁔";
 
-// the cover beside the title, artist, progress and playback buttons, for the player shown
+// Combined view: Now Playing on top + 10-Band Graphic Equalizer & Presets on bottom
 pub fn view(overlay: &Overlay, theme: &Theme, width: f32, height: f32) -> Stack {
     let media = Media::read();
-
     let player = player::shown(&media, overlay);
-
     let several = media.players().len() > 1;
 
     let side_padding = if several { ARROWS_PADDING } else { PADDING };
@@ -57,34 +53,39 @@ pub fn view(overlay: &Overlay, theme: &Theme, width: f32, height: f32) -> Stack 
     let inner_width = width - side_padding * 2.0;
     let inner_height = height - PADDING * 2.0;
 
-    let header_height: f32 = 26.0;
-    let header_gap: f32 = 8.0;
-    let player_height = inner_height - header_height - header_gap;
+    let now_playing_height: f32 = 195.0;
+    let divider_height: f32 = 1.0;
+    let gap: f32 = 10.0;
+    let eq_height: f32 = (inner_height - now_playing_height - divider_height - gap * 2.0).max(120.0);
 
-    let art_size = (inner_width * 0.36).clamp(100.0, 160.0).min(player_height);
-
+    let art_size = 110.0_f32.min(now_playing_height);
     let details_width = inner_width - art_size - GAP;
 
     let switch = overlay.player_switch.value();
 
     let row = Row::new(children![
         cover(player, theme, art_size),
-        details(overlay, player, theme, details_width, player_height),
+        details(overlay, player, theme, details_width, now_playing_height),
     ])
     .gap(GAP)
     .align(Center);
 
     let content = Rectangle::new()
         .width(inner_width)
-        .height(player_height)
+        .height(now_playing_height)
         .translate(switch * SWITCH_DISTANCE, 0.0)
         .opacity(1.0 - switch.abs())
         .align_child(Start, Center)
         .child(row);
 
-    let tabs = super::tabs(overlay, theme);
+    let sep = Rectangle::new()
+        .width(inner_width)
+        .height(divider_height)
+        .fill(theme::with_opacity(theme.border, 0.45));
 
-    let col = Column::new(children![tabs, content]).gap(header_gap);
+    let eq_view = eq_section(theme, inner_width, eq_height);
+
+    let col = Column::new(children![content, sep, eq_view]).gap(gap);
 
     let card = Rectangle::new()
         .width(width)
@@ -102,11 +103,29 @@ pub fn view(overlay: &Overlay, theme: &Theme, width: f32, height: f32) -> Stack 
     let mut layers: Vec<Box<dyn Widget>> = vec![Box::new(card)];
 
     if several {
-        layers.push(Box::new(arrow(overlay, theme, height, -1, ARROW_INSET)));
-        layers.push(Box::new(arrow(overlay, theme, height, 1, width - ARROW_INSET - ARROW_WIDTH)));
+        layers.push(Box::new(arrow(overlay, theme, now_playing_height, -1, ARROW_INSET)));
+        layers.push(Box::new(arrow(overlay, theme, now_playing_height, 1, width - ARROW_INSET - ARROW_WIDTH)));
     }
 
     Stack::new(layers).width(width).height(height)
+}
+
+fn eq_section(theme: &Theme, width: f32, height: f32) -> Column {
+    let eq = audio_eq::EqData::read();
+
+    let top_bar = Row::new(children![
+        audio_eq::preset_selector(theme, &eq.active_preset, 240.0),
+        audio_eq::bypass_button(theme),
+    ])
+    .width(width)
+    .justify(SpaceBetween)
+    .align(Center);
+
+    let bands_grid = audio_eq::bands_row(theme, &eq, width, height - 28.0);
+
+    Column::new(children![top_bar, bands_grid])
+        .width(width)
+        .gap(4.0)
 }
 
 // a tall button at the card's edge that shows the player before or after this one
@@ -125,15 +144,15 @@ fn arrow(overlay: &Overlay, theme: &Theme, height: f32, direction: i32, x: f32) 
 
     Rectangle::new()
         .width(ARROW_WIDTH)
-        .height(height - PADDING * 2.0)
-        .radius(12.0)
+        .height(height)
+        .radius(10.0)
         .fill(fill)
         .translate(x, PADDING)
         .cursor(Pointer)
         .on_hover(move |inside| hover(hover_name.clone(), inside))
         .on_click(move |_| player::switch(direction))
         .align_child(Center, Center)
-        .child(Text::new(icon).size(16.0).font(fonts::NERD).tight().color(theme.text))
+        .child(Text::new(icon).size(14.0).font(fonts::NERD).tight().color(theme.text))
 }
 
 // a music note stands in until the cover is on disk and decoded
@@ -156,7 +175,7 @@ fn cover(player: Option<&MediaPlayer>, theme: &Theme, size: f32) -> Rectangle {
     }
 
     slot.align_child(Center, Center)
-        .child(Text::new(EMPTY_ICON).size(52.0).font(fonts::NERD).tight().color(theme.muted_text))
+        .child(Text::new(EMPTY_ICON).size(42.0).font(fonts::NERD).tight().color(theme.muted_text))
 }
 
 fn details(
@@ -171,15 +190,18 @@ fn details(
         _ => ("Nothing playing", "Open Spotify or another media player"),
     };
 
-    let title = line(title, width, TITLE_HEIGHT, 17.0, Weight::Bold, theme.text);
-    let artist = line(artist, width, ARTIST_HEIGHT, 13.0, Weight::Regular, theme.muted_text);
+    let title_h = 22.0;
+    let artist_h = 16.0;
 
-    let fixed = TITLE_HEIGHT
-        + ARTIST_HEIGHT
+    let title = line(title, width, title_h, 15.0, Weight::Bold, theme.text);
+    let artist = line(artist, width, artist_h, 12.0, Weight::Regular, theme.muted_text);
+
+    let fixed = title_h
+        + artist_h
         + visualizer::HEIGHT
         + wave::HEIGHT
         + CONTROLS_HEIGHT
-        + LINE_GAP * 5.0;
+        + LINE_GAP * 4.0;
 
     let space = Rectangle::new().width(width).height((height - fixed).max(0.0));
 
@@ -287,14 +309,14 @@ fn button(
         .on_hover(move |inside| hover(hover_name.clone(), inside))
         .on_click(move |_| player::control(&player_name, action))
         .align_child(Center, Center)
-        .child(Text::new(icon).size(18.0).font(fonts::NERD).tight().color(theme.text))
+        .child(Text::new(icon).size(16.0).font(fonts::NERD).tight().color(theme.text))
 }
 
 // round while paused, and squares off a little while playing
 fn play_button(playing: bool, theme: &Theme, icon: &str, player_name: &str) -> Rectangle {
     let player_name = String::from(player_name);
 
-    let target = if playing { 12.0 } else { PLAY_BUTTON / 2.0 };
+    let target = if playing { 10.0 } else { PLAY_BUTTON / 2.0 };
 
     let radius = motion::follow("media:play-radius", target, FAST_SPATIAL);
 
@@ -306,5 +328,5 @@ fn play_button(playing: bool, theme: &Theme, icon: &str, player_name: &str) -> R
         .cursor(Pointer)
         .on_click(move |_| player::control(&player_name, MediaPlayer::play_pause))
         .align_child(Center, Center)
-        .child(Text::new(icon).size(21.0).font(fonts::NERD).tight().color(theme.on_accent))
+        .child(Text::new(icon).size(19.0).font(fonts::NERD).tight().color(theme.on_accent))
 }
