@@ -44,6 +44,7 @@ pub struct Overlay {
     pub power_devices: Panel,
 
     pub audio_control: Panel,
+    pub home_assistant: Panel,
 
     pub query: String,
 
@@ -117,6 +118,7 @@ impl Service for Overlay {
             sysmon: Panel::new(),
             power_devices: Panel::new(),
             audio_control: Panel::new(),
+            home_assistant: Panel::new(),
             query: String::new(),
             selected: 0,
             first: 0,
@@ -176,6 +178,7 @@ impl Overlay {
         overlay.sysmon.hide();
         overlay.power_devices.hide();
         overlay.audio_control.hide();
+        overlay.home_assistant.hide();
         utility::close(&mut overlay);
 
         if overlay.power_menu.shown {
@@ -200,6 +203,7 @@ impl Overlay {
         overlay.sysmon.hide();
         overlay.power_devices.hide();
         overlay.audio_control.hide();
+        overlay.home_assistant.hide();
         utility::close(&mut overlay);
 
         if overlay.app_menu.shown {
@@ -262,6 +266,7 @@ impl Overlay {
         overlay.sysmon.hide();
         overlay.power_devices.hide();
         overlay.audio_control.hide();
+        overlay.home_assistant.hide();
         utility::close(&mut overlay);
         overlay.control_center.show();
     }
@@ -275,6 +280,7 @@ impl Overlay {
         overlay.sysmon.hide();
         overlay.power_devices.hide();
         overlay.audio_control.hide();
+        overlay.home_assistant.hide();
         utility::close(&mut overlay);
 
         if overlay.control_center.shown && overlay.center_tab == section {
@@ -308,6 +314,36 @@ impl Overlay {
     }
 
     #[allow(dead_code)]
+        pub fn toggle_home_assistant(monitor: Option<&str>) {
+        let mut overlay = Self::write();
+
+        overlay.launcher.hide();
+        overlay.app_menu.hide();
+        overlay.power_menu.hide();
+        overlay.control_center.hide();
+        overlay.sysmon.hide();
+        overlay.power_devices.hide();
+        overlay.audio_control.hide();
+        overlay.home_assistant.hide();
+        utility::close(&mut overlay);
+
+        if overlay.home_assistant.shown {
+            overlay.home_assistant.hide();
+        } else {
+            overlay.set_active_monitor(monitor);
+            overlay.home_assistant.show();
+        }
+    }
+
+    pub fn hover_home_assistant(inside: bool) {
+        let mut overlay = Self::write();
+        overlay.home_assistant.hovered = inside;
+        if inside {
+            overlay.home_assistant.was_hovered = true;
+        }
+        overlay.dismiss_if_left();
+    }
+
     pub fn toggle_audio_control(monitor: Option<&str>) {
         let mut overlay = Self::write();
 
@@ -434,6 +470,7 @@ impl Overlay {
             &mut self.sysmon,
             &mut self.power_devices,
             &mut self.audio_control,
+            &mut self.home_assistant,
         ];
 
         if !typing {

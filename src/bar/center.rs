@@ -98,6 +98,10 @@ pub fn view(monitor: &Monitor, theme: &Theme, width: f32) -> Row {
         }
     }
 
+    if let Some(ha_pill) = crate::bar::home_assistant::pill(monitor, theme) {
+        right_items.push(Box::new(ha_pill));
+    }
+
     let gap = 8.0;
     let wing_width = ((width - core_width - gap * 2.0) / 2.0).max(0.0);
 

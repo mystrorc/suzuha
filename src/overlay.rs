@@ -2,6 +2,7 @@ pub mod app_menu;
 pub mod audio_control;
 pub mod control_center;
 pub mod launcher;
+pub mod home_assistant;
 pub mod dismiss;
 mod panel;
 mod popups;
@@ -76,6 +77,7 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
         || overlay.audio_control.shown
         || overlay.sysmon.shown
         || overlay.power_devices.shown
+        || overlay.home_assistant.shown
         || overlay.utility.shown;
 
     // Only subscribe the overlay window to animated theme frames when a panel is actually shown
@@ -112,6 +114,10 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
     }
 
     if let Some(panel) = power_devices::view(&overlay, &theme, screen) {
+        panels.push(panel);
+    }
+
+    if let Some(panel) = home_assistant::view(&overlay, &theme, screen) {
         panels.push(panel);
     }
 

@@ -110,6 +110,7 @@ fn main() {
         .ipc("sysmon", overlay::sysmon::ipc)
         .ipc("power", overlay::power_devices::ipc)
         .ipc("audio_control", overlay::audio_control::ipc)
+        .ipc("home_assistant", overlay::home_assistant::ipc)
         .ipc("monitor_layout", ipc_monitor_layout)
         .ipc("monitors", monitors::ipc)
         .ipc("settings", settings::ipc)

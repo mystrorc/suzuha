@@ -1,4 +1,5 @@
 mod center;
+pub mod home_assistant;
 mod motion;
 mod pill;
 mod reveal;
