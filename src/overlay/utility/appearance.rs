@@ -28,6 +28,8 @@ const CHECK: &str = "󰄬";
 const PALETTE_ICON: &str = "󰏘";
 const CURSOR_ICON: &str = "󰍽";
 const FONT_ICON: &str = "󰛄";
+const CHEVRON_DOWN: &str = "󰅀";
+const CHEVRON_UP: &str = "󰅃";
 
 pub fn view(overlay: &Overlay, theme: &Theme, width: f32, height: f32) -> Column {
     let title = title(theme, width);
@@ -179,12 +181,22 @@ fn section_label(text: &'static str, theme: &Theme, width: f32) -> Rectangle {
         )
 }
 
+fn scheme_label(scheme_id: &str) -> &'static str {
+    for (label, id) in SCHEMES {
+        if id == scheme_id {
+            return label;
+        }
+    }
+    SCHEMES[0].0
+}
+
 fn colors_view(overlay: &Overlay, theme: &Theme, width: f32) -> Column {
     let settings = Settings::read();
     let current_mode = settings.text("color_mode");
     let current_scheme = settings.text("scheme");
     let current_accent = settings.text("accent");
     let manual_accent = settings.flag("manual_accent");
+    let current_transition = settings.text("wallpaper_transition");
 
     let mut items: Vec<Box<dyn Widget>> = Vec::new();
 
@@ -196,10 +208,12 @@ fn colors_view(overlay: &Overlay, theme: &Theme, width: f32) -> Column {
     items.push(Box::new(accent_swatches_row(overlay, theme, manual_accent, current_accent, width)));
 
     items.push(Box::new(section_label("Color scheme", theme, width)));
-    for (label, id) in SCHEMES {
-        let is_selected = current_scheme == id;
-        items.push(Box::new(scheme_card(overlay, theme, label, id, is_selected, width)));
+    for widget in scheme_dropdown(overlay, theme, current_scheme, width) {
+        items.push(widget);
     }
+
+    items.push(Box::new(section_label("Wallpaper transition", theme, width)));
+    items.push(Box::new(transition_row(overlay, theme, current_transition, width)));
 
     Column::new(items).width(width).gap(ITEM_GAP)
 }
@@ -346,17 +360,19 @@ fn accent_swatches_row(
     Row::new(swatches).width(width).height(size).gap(gap).align(Center)
 }
 
-fn scheme_card(
+fn scheme_dropdown(
     overlay: &Overlay,
     theme: &Theme,
-    label: &'static str,
-    id: &'static str,
-    selected: bool,
+    current_scheme: &str,
     width: f32,
-) -> Rectangle {
-    let hover_name = format!("appearance:scheme:{id}");
+) -> Vec<Box<dyn Widget>> {
+    let mut widgets: Vec<Box<dyn Widget>> = Vec::new();
+    let is_open = overlay.scheme_dropdown_open;
+    let label = scheme_label(current_scheme);
+    let chevron = if is_open { CHEVRON_UP } else { CHEVRON_DOWN };
+    let hover_name = String::from("appearance:scheme_dropdown_header");
 
-    let fill = if selected {
+    let fill = if is_open {
         theme.selected_surface
     } else if hovered(overlay, &hover_name) {
         theme.hover_surface
@@ -364,30 +380,43 @@ fn scheme_card(
         theme.surface
     };
 
-    let weight = if selected { Weight::SemiBold } else { Weight::Regular };
-    let check = if selected { CHECK } else { "" };
+    let text_width = width - CARD_PADDING * 2.0 - ICON_SIZE - 28.0;
 
-    let text_width = width - CARD_PADDING * 2.0 - ICON_SIZE - 24.0;
-
-    let content = Row::new(children![
+    let header_content = Row::new(children![
         Rectangle::new()
             .width(ICON_SIZE)
             .height(ICON_SIZE)
             .radius(8.0)
-            .fill(theme.selected_surface)
+            .fill(if is_open { theme.accent } else { theme.selected_surface })
             .align_child(Center, Center)
-            .child(Text::new(PALETTE_ICON).size(14.0).font(fonts::NERD).tight().color(theme.accent)),
+            .child(
+                Text::new(PALETTE_ICON)
+                    .size(14.0)
+                    .font(fonts::NERD)
+                    .tight()
+                    .color(if is_open { theme.on_accent } else { theme.accent }),
+            ),
         Rectangle::new()
             .width(text_width)
             .height(ICON_SIZE)
             .align_child(Start, Center)
-            .child(Text::new(label).size(11.0).font(fonts::BODY).weight(weight).color(theme.text)),
-        Text::new(check).size(13.0).font(fonts::NERD).tight().color(theme.accent),
+            .child(
+                Text::new(label)
+                    .size(12.0)
+                    .font(fonts::BODY)
+                    .weight(Weight::SemiBold)
+                    .color(theme.text),
+            ),
+        Text::new(chevron)
+            .size(14.0)
+            .font(fonts::NERD)
+            .tight()
+            .color(if is_open { theme.accent } else { theme.secondary_text }),
     ])
     .gap(CARD_PADDING)
     .align(Center);
 
-    Rectangle::new()
+    let mut header = Rectangle::new()
         .width(width)
         .height(CARD_HEIGHT)
         .radius(10.0)
@@ -400,9 +429,154 @@ fn scheme_card(
             left: CARD_PADDING,
         })
         .on_hover(move |inside| hover(hover_name.clone(), inside))
-        .on_click(move |_| Settings::set("scheme", id))
+        .on_click(|_| {
+            let mut o = Overlay::write();
+            o.scheme_dropdown_open = !o.scheme_dropdown_open;
+        })
         .align_child(Start, Center)
-        .child(content)
+        .child(header_content);
+
+    if is_open {
+        header = header.border(1.5, theme.accent);
+    }
+
+    widgets.push(Box::new(header));
+
+    if is_open {
+        let mut dropdown_items: Vec<Box<dyn Widget>> = Vec::new();
+        let item_width = width - 16.0;
+
+        for (item_label, id) in SCHEMES {
+            let is_selected = current_scheme == id;
+            let item_hover = format!("appearance:scheme_item:{id}");
+
+            let item_fill = if is_selected {
+                theme.selected_surface
+            } else if hovered(overlay, &item_hover) {
+                theme.hover_surface
+            } else {
+                Color::TRANSPARENT
+            };
+
+            let item_text_color = if is_selected {
+                theme.accent
+            } else {
+                theme.text
+            };
+
+            let check_str = if is_selected { CHECK } else { "" };
+            let label_width = item_width - 28.0;
+
+            let row_content = Row::new(children![
+                Rectangle::new()
+                    .width(label_width)
+                    .height(28.0)
+                    .align_child(Start, Center)
+                    .child(
+                        Text::new(item_label)
+                            .size(11.0)
+                            .font(fonts::BODY)
+                            .weight(if is_selected { Weight::SemiBold } else { Weight::Regular })
+                            .color(item_text_color),
+                    ),
+                Text::new(check_str)
+                    .size(13.0)
+                    .font(fonts::NERD)
+                    .tight()
+                    .color(theme.accent),
+            ])
+            .align(Center);
+
+            let item = Rectangle::new()
+                .width(item_width)
+                .height(30.0)
+                .radius(8.0)
+                .fill(item_fill)
+                .cursor(Pointer)
+                .padding(Padding {
+                    top: 2.0,
+                    right: 8.0,
+                    bottom: 2.0,
+                    left: 10.0,
+                })
+                .on_hover(move |inside| hover(item_hover.clone(), inside))
+                .on_click(move |_| {
+                    Settings::set("scheme", id);
+                    Overlay::write().scheme_dropdown_open = false;
+                })
+                .align_child(Start, Center)
+                .child(row_content);
+
+            dropdown_items.push(Box::new(item));
+        }
+
+        let container_height = dropdown_items.len() as f32 * 30.0
+            + (dropdown_items.len().saturating_sub(1)) as f32 * 2.0
+            + 12.0;
+
+        let container = Rectangle::new()
+            .width(width)
+            .height(container_height)
+            .radius(10.0)
+            .fill(theme.surface)
+            .border(1.0, theme.border)
+            .padding(Padding {
+                top: 6.0,
+                right: 8.0,
+                bottom: 6.0,
+                left: 8.0,
+            })
+            .child(Column::new(dropdown_items).width(item_width).gap(2.0));
+
+        widgets.push(Box::new(container));
+    }
+
+    widgets
+}
+
+fn transition_row(overlay: &Overlay, theme: &Theme, current_transition: &str, width: f32) -> Row {
+    let transitions = [("Circle", "circle"), ("Fade", "fade"), ("Instant", "instant")];
+    let count = transitions.len() as f32;
+    let gap = 6.0;
+    let pill_width = (width - gap * (count - 1.0)) / count;
+
+    let mut pills: Vec<Box<dyn Widget>> = Vec::new();
+
+    for (label, mode) in transitions {
+        let active = current_transition == mode;
+        let hover_name = format!("appearance:transition:{mode}");
+
+        let fill = if active {
+            theme.accent
+        } else if hovered(overlay, &hover_name) {
+            theme.hover_surface
+        } else {
+            theme.surface
+        };
+
+        let text_color = if active { theme.on_accent } else { theme.text };
+
+        let pill = Rectangle::new()
+            .width(pill_width)
+            .height(28.0)
+            .radius(14.0)
+            .fill(fill)
+            .cursor(Pointer)
+            .on_hover(move |inside| hover(hover_name.clone(), inside))
+            .on_click(move |_| Settings::set("wallpaper_transition", mode))
+            .align_child(Center, Center)
+            .child(
+                Text::new(label)
+                    .size(11.0)
+                    .font(fonts::BODY)
+                    .weight(if active { Weight::SemiBold } else { Weight::Regular })
+                    .color(text_color),
+            );
+
+        pills.push(Box::new(pill));
+    }
+
+    Row::new(pills).width(width).height(28.0).gap(gap).justify(SpaceBetween).align(Center)
 }
 
 fn cursor_view(overlay: &Overlay, theme: &Theme, width: f32) -> Column {

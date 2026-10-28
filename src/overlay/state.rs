@@ -65,6 +65,7 @@ pub struct Overlay {
     pub page: Page,
 
     pub appearance_tab: usize,
+    pub scheme_dropdown_open: bool,
 
     // the control under the pointer in the utility center, like "tab:wifi"
     pub hovered: Option<String>,
@@ -129,6 +130,7 @@ impl Service for Overlay {
             utility: Panel::new(),
             page: Page::Notifications,
             appearance_tab: 0,
+            scheme_dropdown_open: false,
             hovered: None,
             password_for: None,
             show_password: false,

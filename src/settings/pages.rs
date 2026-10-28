@@ -12,7 +12,6 @@ pub mod kanata;
 mod launcher;
 pub mod monitors;
 mod user;
-mod wallpaper;
 mod weather;
 
 pub use user::NAME_INPUT;
@@ -30,7 +29,6 @@ pub fn build(shown: Shown, page: &mut Page) {
         Shown::Audio => audio::build(page),
         Shown::DefaultApps => default_apps::build(page),
         Shown::Launcher => launcher::build(page),
-        Shown::Wallpaper => wallpaper::build(page),
         Shown::Bar => bar::build(page),
         Shown::Behavior => behavior::build(page),
         Shown::Floating => floating::build(page),
@@ -39,3 +37,4 @@ pub fn build(shown: Shown, page: &mut Page) {
         Shown::About => about::build(page),
     }
 }
+

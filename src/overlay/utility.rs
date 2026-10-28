@@ -180,6 +180,7 @@ pub fn close(overlay: &mut Overlay) {
         Bluetooth::stop_scan();
     }
 
+    overlay.scheme_dropdown_open = false;
     overlay.utility.hide();
 }
 
@@ -208,7 +209,12 @@ pub fn ipc(arguments: &[String]) -> String {
         _ => !shown,
     };
 
-    let monitor_arg = arguments.get(2).map(String::as_str);
+    let monitor_arg = if arguments.get(2).map(String::as_str) == Some("dropdown") {
+        Overlay::write().scheme_dropdown_open = true;
+        None
+    } else {
+        arguments.get(2).map(String::as_str)
+    };
 
     if wanted != shown {
         Overlay::toggle_utility(monitor_arg);
@@ -281,3 +287,4 @@ pub fn hovered(overlay: &Overlay, name: &str) -> bool {
 pub fn fade_target(overlay: &Overlay, name: &str) -> f32 {
     if hovered(overlay, name) { 1.0 } else { 0.0 }
 }
+

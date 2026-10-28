@@ -82,7 +82,6 @@ pub enum Page {
     Audio,
     DefaultApps,
     Launcher,
-    Wallpaper,
     Bar,
     Behavior,
     Floating,
@@ -92,7 +91,7 @@ pub enum Page {
 }
 
 // every page in the list's order, with its icon, label and the line under its title
-const PAGES: [(Page, &str, &str, &str); 14] = [
+const PAGES: [(Page, &str, &str, &str); 13] = [
     (Page::User, "󰍹", "System info", "System specifications and user profile configuration."),
     (
         Page::Monitors,
@@ -119,12 +118,6 @@ const PAGES: [(Page, &str, &str, &str); 14] = [
         "󰍉",
         "Launcher",
         "Configure search results, command mode, and launcher presentation.",
-    ),
-    (
-        Page::Wallpaper,
-        "󰸉",
-        "Wallpaper",
-        "Choose the source directory, transitions, shuffle, and palette behavior.",
     ),
     (
         Page::Bar,
@@ -440,8 +433,24 @@ pub fn open_on(page: Page) {
     open();
 }
 
-pub fn ipc(_arguments: &[String]) -> String {
+pub fn ipc(arguments: &[String]) -> String {
+    if let Some(arg) = arguments.first() {
+        let page = match arg.as_str() {
+            "appearance" => Some(Page::Appearance),
+            "monitors" => Some(Page::Monitors),
+            "input" => Some(Page::Input),
+            "audio" => Some(Page::Audio),
+            "user" => Some(Page::User),
+            "about" => Some(Page::About),
+            _ => None,
+        };
+        if let Some(p) = page {
+            open_on(p);
+            return String::from("ok");
+        }
+    }
     open();
 
     String::from("ok")
 }
+
