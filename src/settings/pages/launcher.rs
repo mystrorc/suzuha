@@ -56,4 +56,28 @@ pub fn build(page: &mut Page) {
     switch::add(page, "command_pomodoro", "Pomodoro command", "Show Pomodoro in command mode");
 
     page.end_group();
+
+    // Dismissal & Behavior
+    switch::add(
+        page,
+        "launcher_close_on_launch",
+        "Close launcher after launch",
+        "Dismiss the launcher after starting an app or tmux session",
+    );
+
+    switch::add(
+        page,
+        "launcher_escape_clears",
+        "Escape clears launcher first",
+        "Clear a non-empty query before Escape closes the launcher",
+    );
+
+    switch::add(
+        page,
+        "click_outside_dismiss",
+        "Click outside to dismiss",
+        "Let clicks outside open panels close the current overlay",
+    );
+
+    page.end_group();
 }

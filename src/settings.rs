@@ -12,13 +12,12 @@ mod switch;
 
 use amane::{
     Center, Color, Column, End, Key, Parent, Pointer, Rectangle, Row, ScrollArea, Service,
-    SpaceBetween, Stack, Text, TextInput, Weight, Widget, Window, children,
+    SpaceBetween, Stack, Text, Weight, Widget, Window, children,
 };
 
 pub use store::Settings;
 
 use crate::fonts;
-use crate::profile::Profile;
 use crate::theme::{self, Theme};
 
 // what open_window and close_window know this window by
@@ -75,7 +74,6 @@ const CLOSE_ICON: &str = "󰅖";
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Page {
-    User,
     Monitors,
     Appearance,
     Input,
@@ -83,16 +81,13 @@ pub enum Page {
     DefaultApps,
     Launcher,
     Bar,
-    Behavior,
     Floating,
     Weather,
     Integrations,
-    About,
 }
 
 // every page in the list's order, with its icon, label and the line under its title
-const PAGES: [(Page, &str, &str, &str); 13] = [
-    (Page::User, "󰍹", "System info", "System specifications and user profile configuration."),
+const PAGES: [(Page, &str, &str, &str); 10] = [
     (
         Page::Monitors,
         "󰶐",
@@ -126,12 +121,6 @@ const PAGES: [(Page, &str, &str, &str); 13] = [
         "Control placement, modules, clock formatting, and workspace presentation.",
     ),
     (
-        Page::Behavior,
-        "󱒓",
-        "Behavior",
-        "Change dismissal rules, launcher behavior, and global motion preferences.",
-    ),
-    (
         Page::Floating,
         "󱗲",
         "Floating widgets",
@@ -149,7 +138,6 @@ const PAGES: [(Page, &str, &str, &str); 13] = [
         "Integrations",
         "Keep supported applications in sync with the current shell palette.",
     ),
-    (Page::About, "󰋼", "About", "Inspect the running setup or reset settings."),
 ];
 
 // something risky waiting for a yes before it is staged
@@ -177,7 +165,7 @@ pub struct Shown {
 impl Service for Shown {
     fn new() -> Self {
         Self {
-            page: Page::User,
+            page: Page::Appearance,
             choice: None,
             hovered: None,
             confirm: None,
@@ -410,9 +398,7 @@ pub fn open() {
 
     pages::monitors::reload();
 
-    let typed_name = String::from(Profile::read().typed_name());
 
-    TextInput::set_text(pages::NAME_INPUT, &typed_name);
 
     field::fill();
 
@@ -440,8 +426,8 @@ pub fn ipc(arguments: &[String]) -> String {
             "monitors" => Some(Page::Monitors),
             "input" => Some(Page::Input),
             "audio" => Some(Page::Audio),
-            "user" => Some(Page::User),
-            "about" => Some(Page::About),
+            "launcher" => Some(Page::Launcher),
+            "bar" => Some(Page::Bar),
             _ => None,
         };
         if let Some(p) = page {

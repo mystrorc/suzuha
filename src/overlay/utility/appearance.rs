@@ -197,6 +197,7 @@ fn colors_view(overlay: &Overlay, theme: &Theme, width: f32) -> Column {
     let current_accent = settings.text("accent");
     let manual_accent = settings.flag("manual_accent");
     let current_transition = settings.text("wallpaper_transition");
+    let current_speed = settings.number("animation_speed").max(0.1);
 
     let mut items: Vec<Box<dyn Widget>> = Vec::new();
 
@@ -214,6 +215,9 @@ fn colors_view(overlay: &Overlay, theme: &Theme, width: f32) -> Column {
 
     items.push(Box::new(section_label("Wallpaper transition", theme, width)));
     items.push(Box::new(transition_row(overlay, theme, current_transition, width)));
+
+    items.push(Box::new(section_label("Animation speed", theme, width)));
+    items.push(Box::new(animation_speed_row(overlay, theme, current_speed, width)));
 
     Column::new(items).width(width).gap(ITEM_GAP)
 }
@@ -262,6 +266,57 @@ fn mode_row(overlay: &Overlay, theme: &Theme, current_mode: &str, width: f32) ->
 
     Row::new(pills).width(width).height(28.0).gap(gap).justify(SpaceBetween).align(Center)
 }
+
+fn animation_speed_row(overlay: &Overlay, theme: &Theme, current_speed: f32, width: f32) -> Row {
+    let speeds: [(&str, &str, f32); 4] = [
+        ("0.5×", "0.5", 0.5),
+        ("1.0×", "1", 1.0),
+        ("1.5×", "1.5", 1.5),
+        ("2.0×", "2", 2.0),
+    ];
+    let count = speeds.len() as f32;
+    let gap = 6.0;
+    let pill_width = (width - gap * (count - 1.0)) / count;
+
+    let mut pills: Vec<Box<dyn Widget>> = Vec::new();
+
+    for (label, mode, val) in speeds {
+        let active = (current_speed - val).abs() < 0.15;
+        let hover_name = format!("appearance:speed:{mode}");
+
+        let fill = if active {
+            theme.accent
+        } else if hovered(overlay, &hover_name) {
+            theme.hover_surface
+        } else {
+            theme.surface
+        };
+
+        let text_color = if active { theme.on_accent } else { theme.text };
+
+        let pill = Rectangle::new()
+            .width(pill_width)
+            .height(28.0)
+            .radius(14.0)
+            .fill(fill)
+            .cursor(Pointer)
+            .on_hover(move |inside| hover(hover_name.clone(), inside))
+            .on_click(move |_| Settings::set("animation_speed", mode))
+            .align_child(Center, Center)
+            .child(
+                Text::new(label)
+                    .size(11.0)
+                    .font(fonts::BODY)
+                    .weight(if active { Weight::SemiBold } else { Weight::Regular })
+                    .color(text_color),
+            );
+
+        pills.push(Box::new(pill));
+    }
+
+    Row::new(pills).width(width).height(28.0).gap(gap).justify(SpaceBetween).align(Center)
+}
+
 
 fn wallpaper_accent_button(overlay: &Overlay, theme: &Theme, manual_accent: bool, width: f32) -> Rectangle {
     let active = !manual_accent;

@@ -206,5 +206,28 @@ pub fn build(page: &mut Page) {
     );
 
     page.end_group();
+
+    // Motion & Animations
+    slider::add(
+        page,
+        "animation_speed",
+        "Animation speed",
+        "Apply a global speed multiplier to every animation",
+        Range {
+            min: 0.5,
+            max: 2.0,
+            step: 0.1,
+            label: slider::times,
+        },
+    );
+
+    switch::add(
+        page,
+        "reduce_motion",
+        "Reduce motion",
+        "Disable shell motion while preserving state changes",
+    );
+
+    page.end_group();
 }
 
