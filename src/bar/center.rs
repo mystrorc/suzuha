@@ -1,5 +1,5 @@
 use amane::{
-    Audio, Button, Center, End, Monitor, Parent, Pointer, Rectangle, Row, Scroll, Service, Stack,
+    Align, Audio, Button, Center, End, Monitor, Parent, Pointer, Rectangle, Row, Scroll, Service, Stack,
     Start, Text, Widget, children,
 };
 
@@ -16,7 +16,7 @@ const RING_THICKNESS: f32 = 3.0;
 // how far one wheel step moves a level
 const STEP: i32 = 5;
 
-pub fn view(monitor: &Monitor, theme: &Theme, width: f32) -> Row {
+pub fn view(monitor: &Monitor, theme: &Theme, width: f32, align: Align) -> Row {
     let settings = Settings::read();
 
     let show_workspaces = settings.flag("bar_workspaces");
@@ -110,14 +110,14 @@ pub fn view(monitor: &Monitor, theme: &Theme, width: f32) -> Row {
         .height(Parent)
         .gap(8.0)
         .justify(End)
-        .align(Center);
+        .align(align);
 
     let right_wing = Row::new(right_items)
         .width(wing_width)
         .height(Parent)
         .gap(8.0)
         .justify(Start)
-        .align(Center);
+        .align(align);
 
     let center_locked: Box<dyn Widget> = if core_width > 0.0 {
         Box::new(
@@ -138,7 +138,7 @@ pub fn view(monitor: &Monitor, theme: &Theme, width: f32) -> Row {
     .height(Parent)
     .gap(gap)
     .justify(Center)
-    .align(Center)
+    .align(align)
 }
 
 // Volume segment inside the locked center pill

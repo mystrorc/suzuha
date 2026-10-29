@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 
 use amane::{
-    Battery, Button, Center, Color, End, Full, Memory, Monitor, Padding, Parent, Pointer, Rectangle, Row, Service,
+    Align, Battery, Button, Center, Color, End, Full, Memory, Monitor, Padding, Parent, Pointer, Rectangle, Row, Service,
     SpaceBetween, Stack, Text, Widget, children,
 };
 
@@ -38,7 +38,7 @@ thread_local! {
 }
 
 // Right section of the bar: System Tray and Power Menu button
-pub fn view(monitor: &Monitor, theme: &Theme, width: f32) -> Row {
+pub fn view(monitor: &Monitor, theme: &Theme, width: f32, align: Align) -> Row {
     let settings = Settings::read();
 
     let mut items: Vec<Box<dyn Widget>> = Vec::new();
@@ -58,7 +58,7 @@ pub fn view(monitor: &Monitor, theme: &Theme, width: f32) -> Row {
         .height(Parent)
         .gap(10.0)
         .justify(End)
-        .align(Center)
+        .align(align)
 }
 
 fn power_button(monitor: &Monitor, theme: &Theme) -> Rectangle {

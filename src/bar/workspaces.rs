@@ -2,7 +2,7 @@ use std::fs;
 use std::sync::OnceLock;
 
 use amane::{
-    Button, Center, Color, Full, Media, Monitor, Parent, Pointer, Rectangle, Row, Service, Stack, Start, Text,
+    Align, Button, Center, Color, Full, Media, Monitor, Parent, Pointer, Rectangle, Row, Service, Stack, Start, Text,
     Weight, Widget, Workspace, Workspaces, children,
 };
 
@@ -61,7 +61,7 @@ fn distro_logo() -> &'static str {
 }
 
 // Left section of the bar: only the Power Menu button with the centered distro logo
-pub fn view(monitor: &Monitor, theme: &Theme, width: f32) -> Row {
+pub fn view(monitor: &Monitor, theme: &Theme, width: f32, align: Align) -> Row {
     let monitor_name = monitor.name.clone();
     let logo = Rectangle::new()
         .width(34.0)
@@ -92,7 +92,7 @@ pub fn view(monitor: &Monitor, theme: &Theme, width: f32) -> Row {
         .height(Parent)
         .gap(10.0)
         .justify(Start)
-        .align(Center)
+        .align(align)
 }
 
 pub fn workspaces_strip(monitor: &Monitor, theme: &Theme, style: &str) -> Rectangle {

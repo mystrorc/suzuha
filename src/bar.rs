@@ -10,7 +10,7 @@ mod timer;
 mod workspaces;
 
 use amane::{
-    Color, Full, Layer, LayerWindow, Monitor, Parent, Rectangle, Row, Service, Vertical,
+    Align, Color, Full, Layer, LayerWindow, Monitor, Parent, Rectangle, Row, Service, Vertical,
     Zone, children,
 };
 
@@ -21,7 +21,7 @@ use crate::theme;
 
 use reveal::Reveal;
 
-pub const ITEM_HEIGHT: f32 = 26.0;
+pub const ITEM_HEIGHT: f32 = 32.0;
 
 // Width reserved on the left (Power Menu) and right (System Tray) so the middle section stays centered
 const SIDE_WIDTH: f32 = 140.0;
@@ -74,11 +74,14 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
     let side_width = SIDE_WIDTH.min(total_width * 0.2);
     let center_width = (total_width - side_width * 2.0).max(0.0);
 
+    let align = if bottom { Align::End } else { Align::Start };
+
     let sections = Row::new(children![
-        workspaces::view(monitor, &theme, side_width),
-        center::view(monitor, &theme, center_width),
-        system::view(monitor, &theme, side_width),
-    ]);
+        workspaces::view(monitor, &theme, side_width, align),
+        center::view(monitor, &theme, center_width, align),
+        system::view(monitor, &theme, side_width, align),
+    ])
+    .align(align);
 
     let content = Rectangle::new()
         .width(Parent)
