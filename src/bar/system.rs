@@ -1,8 +1,8 @@
 use std::cell::RefCell;
 
 use amane::{
-    Align, Battery, Button, Center, Color, End, Full, Memory, Monitor, Padding, Parent, Pointer, Rectangle, Row, Service,
-    SpaceBetween, Stack, Text, Widget, children,
+    Align, Battery, Button, Center, Color, End, Full, Link, Memory, Monitor, Network, Padding, Parent, Pointer, Rectangle, Row, Service,
+    Stack, Text, Widget, children,
 };
 
 use super::{pill, ring};
@@ -13,16 +13,19 @@ use crate::recorder;
 use crate::settings::Settings;
 use crate::theme::Theme;
 
-// the memory icon, and the notification, wifi and bluetooth tray icons
+// the memory icon, and the notification, network and bluetooth tray icons
 const MEMORY_ICON: &str = "󰍛";
-const TRAY_ICONS: [&str; 3] = ["󰂚", "", "󰂯"];
+const NOTIF_ICON: &str = "󰂚";
+const BLUETOOTH_ICON: &str = "󰂯";
 
 const RING_SIZE: f32 = 24.0;
 const RING_THICKNESS: f32 = 3.0;
 
-// 50px of icons with 10px of padding on each side
-const TRAY_WIDTH: f32 = 70.0;
-const TRAY_PADDING: f32 = 10.0;
+// 3 icons (18px each) + 2 gaps (10px each) + 24px padding = 98px
+const TRAY_PADDING: f32 = 12.0;
+const TRAY_ICON_WIDTH: f32 = 18.0;
+const TRAY_GAP: f32 = 10.0;
+const TRAY_WIDTH: f32 = TRAY_PADDING * 2.0 + TRAY_ICON_WIDTH * 3.0 + TRAY_GAP * 2.0;
 
 // with the row's 10px gap this keeps 15px from the screen edge
 const EDGE: f32 = 5.0;
@@ -196,25 +199,50 @@ pub fn memory_segment(monitor: &Monitor, theme: &Theme) -> (f32, Rectangle) {
     (width, seg)
 }
 
+fn network_icon() -> &'static str {
+    let network = Network::read();
+    if !network.connected() {
+        "󰤭" // Disconnected icon
+    } else {
+        match network.link() {
+            Link::Wired => "󰈀", // Ethernet LAN icon
+            Link::Wifi => "",  // Wi-Fi icon
+            _ => "󰈀",
+        }
+    }
+}
+
+fn tray_icon(icon: &str, theme: &Theme) -> Rectangle {
+    Rectangle::new()
+        .width(TRAY_ICON_WIDTH)
+        .height(Parent)
+        .align_child(Center, Center)
+        .child(
+            Text::new(icon)
+                .size(15.0)
+                .font(fonts::NERD)
+                .tight()
+                .color(theme.on_accent),
+        )
+}
+
 // opens the utility center, and grows to the left with the time while a recording runs
 fn tray(monitor: &Monitor, theme: &Theme) -> Rectangle {
-    let mut icons: Vec<Box<dyn Widget>> = Vec::new();
+    let icons: Vec<Box<dyn Widget>> = vec![
+        Box::new(tray_icon(NOTIF_ICON, theme)),
+        Box::new(tray_icon(network_icon(), theme)),
+        Box::new(tray_icon(BLUETOOTH_ICON, theme)),
+    ];
 
-    for icon in TRAY_ICONS {
-        let text = Text::new(icon).size(15.0).font(fonts::NERD).color(theme.on_accent);
-
-        icons.push(Box::new(text));
-    }
-
-    // spread across the inside, so the spacing matches however wide amane measures each glyph
     let row = Row::new(icons)
-        .width(TRAY_WIDTH - TRAY_PADDING * 2.0)
-        .justify(SpaceBetween)
+        .gap(TRAY_GAP)
         .align(Center);
 
     let (extra, recording) = recording(theme);
 
-    let content = Row::new(children![recording, row]).align(Center);
+    let content = Row::new(children![recording, row])
+        .gap(8.0)
+        .align(Center);
 
     let monitor_name = monitor.name.clone();
     pill::view(TRAY_WIDTH + extra, theme.accent)
@@ -226,7 +254,7 @@ fn tray(monitor: &Monitor, theme: &Theme) -> Rectangle {
             top: 0.0,
             right: TRAY_PADDING,
             bottom: 0.0,
-            left: 0.0,
+            left: TRAY_PADDING,
         })
         .child(content)
 }

@@ -1,7 +1,7 @@
 mod center;
 pub mod home_assistant;
 mod motion;
-mod pill;
+pub mod pill;
 mod reveal;
 mod star;
 mod ring;

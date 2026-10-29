@@ -39,6 +39,9 @@ pub struct Overlay {
     pub app_menu_scroll: f32,
     pub app_menu_hovered: Option<usize>,
 
+    pub settings_menu: Panel,
+    pub settings_tab: usize,
+
     pub sysmon: Panel,
 
     pub power_devices: Panel,
@@ -116,6 +119,8 @@ impl Service for Overlay {
             app_menu_category: 0,
             app_menu_scroll: 0.0,
             app_menu_hovered: None,
+            settings_menu: Panel::new(),
+            settings_tab: 0,
             sysmon: Panel::new(),
             power_devices: Panel::new(),
             audio_control: Panel::new(),
@@ -176,6 +181,7 @@ impl Overlay {
 
         overlay.launcher.hide();
         overlay.app_menu.hide();
+        overlay.settings_menu.hide();
         overlay.control_center.hide();
         overlay.sysmon.hide();
         overlay.power_devices.hide();
@@ -201,6 +207,7 @@ impl Overlay {
 
         overlay.launcher.hide();
         overlay.power_menu.hide();
+        overlay.settings_menu.hide();
         overlay.control_center.hide();
         overlay.sysmon.hide();
         overlay.power_devices.hide();
@@ -226,16 +233,48 @@ impl Overlay {
         Self::write().app_menu.hide();
     }
 
+    pub fn toggle_settings_menu(monitor: Option<&str>) {
+        let mut overlay = Self::write();
+
+        overlay.launcher.hide();
+        overlay.power_menu.hide();
+        overlay.app_menu.hide();
+        overlay.control_center.hide();
+        overlay.sysmon.hide();
+        overlay.power_devices.hide();
+        overlay.audio_control.hide();
+        overlay.home_assistant.hide();
+        utility::close(&mut overlay);
+
+        if overlay.settings_menu.shown {
+            overlay.settings_menu.hide();
+        } else {
+            overlay.set_active_monitor(monitor);
+            overlay.settings_menu.show();
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn hide_settings_menu() {
+        Self::write().settings_menu.hide();
+    }
+
+    pub fn set_settings_tab(tab: usize) {
+        Self::write().settings_tab = tab;
+    }
+
     pub fn toggle_utility(monitor: Option<&str>) {
         let mut overlay = Self::write();
 
         overlay.launcher.hide();
         overlay.app_menu.hide();
+        overlay.settings_menu.hide();
         overlay.power_menu.hide();
         overlay.control_center.hide();
         overlay.sysmon.hide();
         overlay.power_devices.hide();
         overlay.audio_control.hide();
+        overlay.home_assistant.hide();
 
         if overlay.utility.shown {
             utility::close(&mut overlay);
@@ -264,6 +303,7 @@ impl Overlay {
         overlay.control_tab = tab;
         overlay.launcher.hide();
         overlay.app_menu.hide();
+        overlay.settings_menu.hide();
         overlay.power_menu.hide();
         overlay.sysmon.hide();
         overlay.power_devices.hide();
@@ -278,6 +318,7 @@ impl Overlay {
 
         overlay.launcher.hide();
         overlay.app_menu.hide();
+        overlay.settings_menu.hide();
         overlay.power_menu.hide();
         overlay.sysmon.hide();
         overlay.power_devices.hide();
@@ -316,11 +357,12 @@ impl Overlay {
     }
 
     #[allow(dead_code)]
-        pub fn toggle_home_assistant(monitor: Option<&str>) {
+    pub fn toggle_home_assistant(monitor: Option<&str>) {
         let mut overlay = Self::write();
 
         overlay.launcher.hide();
         overlay.app_menu.hide();
+        overlay.settings_menu.hide();
         overlay.power_menu.hide();
         overlay.control_center.hide();
         overlay.sysmon.hide();
@@ -351,10 +393,12 @@ impl Overlay {
 
         overlay.launcher.hide();
         overlay.app_menu.hide();
+        overlay.settings_menu.hide();
         overlay.power_menu.hide();
         overlay.control_center.hide();
         overlay.sysmon.hide();
         overlay.power_devices.hide();
+        overlay.home_assistant.hide();
         utility::close(&mut overlay);
 
         if overlay.audio_control.shown {
@@ -468,6 +512,7 @@ impl Overlay {
         let mut panels = vec![
             &mut self.power_menu,
             &mut self.app_menu,
+            &mut self.settings_menu,
             &mut self.control_center,
             &mut self.sysmon,
             &mut self.power_devices,

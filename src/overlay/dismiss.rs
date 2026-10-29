@@ -15,6 +15,7 @@ pub fn view(_monitor: &Monitor) -> LayerWindow {
         || overlay.control_center.shown
         || overlay.launcher.shown
         || overlay.app_menu.shown
+        || overlay.settings_menu.shown
         || overlay.utility.shown
         || overlay.sysmon.shown
         || overlay.power_devices.shown
@@ -45,6 +46,7 @@ fn close_all() {
 
     overlay.power_menu.hide();
     overlay.app_menu.hide();
+    overlay.settings_menu.hide();
     overlay.control_center.hide();
     overlay.launcher.hide();
     overlay.sysmon.hide();

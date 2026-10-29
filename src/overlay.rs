@@ -9,6 +9,7 @@ mod popups;
 pub mod power_devices;
 pub mod power_menu;
 mod region;
+pub mod settings_menu;
 mod state;
 pub mod sysmon;
 pub mod utility;
@@ -73,6 +74,7 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
     let any_panel_open = overlay.power_menu.shown
         || overlay.launcher.shown
         || overlay.app_menu.shown
+        || overlay.settings_menu.shown
         || overlay.control_center.shown
         || overlay.audio_control.shown
         || overlay.sysmon.shown
@@ -98,6 +100,10 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
     }
 
     if let Some(panel) = app_menu::view(&overlay, &theme, screen) {
+        panels.push(panel);
+    }
+
+    if let Some(panel) = settings_menu::view(&overlay, &theme, screen) {
         panels.push(panel);
     }
 
@@ -139,6 +145,7 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
      */
     let keyboard = if overlay.launcher.shown
         || overlay.app_menu.shown
+        || overlay.settings_menu.shown
         || utility::wants_keyboard(&overlay) {
         Keyboard::Exclusive
     } else if overlay.utility.shown {
@@ -201,6 +208,13 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
 
 // only one panel is out at a time, so only one of these acts on the key
 fn key_pressed(key: Key) {
+    if Overlay::read().settings_menu.shown {
+        if key == Key::Escape {
+            Overlay::hide_settings_menu();
+        }
+        return;
+    }
+
     launcher::key_pressed(key);
     app_menu::key_pressed(key);
     utility::key_pressed(key);

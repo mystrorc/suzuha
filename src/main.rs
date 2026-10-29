@@ -103,6 +103,7 @@ fn main() {
         .ipc("brightness", ipc_brightness)
         .ipc("launcher", overlay::launcher::ipc)
         .ipc("app_menu", overlay::app_menu::ipc)
+        .ipc("settings_menu", overlay::settings_menu::ipc)
         .ipc("power_menu", overlay::power_menu::ipc)
         .ipc("utility", overlay::utility::ipc)
         .ipc("control", overlay::control_center::ipc)

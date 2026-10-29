@@ -60,7 +60,7 @@ fn distro_logo() -> &'static str {
     })
 }
 
-// Left section of the bar: only the Power Menu button with the centered distro logo
+// Left section of the bar: Distro logo (opens app menu) and Settings button (opens settings pulldown)
 pub fn view(monitor: &Monitor, theme: &Theme, width: f32, align: Align) -> Row {
     let monitor_name = monitor.name.clone();
     let logo = Rectangle::new()
@@ -79,18 +79,38 @@ pub fn view(monitor: &Monitor, theme: &Theme, width: f32, align: Align) -> Row {
                 .color(theme.accent),
         );
 
+    let overlay = Overlay::read();
+    let settings_open = overlay.settings_menu.shown;
+    let settings_monitor = monitor.name.clone();
+    let settings_button = Rectangle::new()
+        .width(34.0)
+        .height(STRIP_HEIGHT)
+        .radius(Full)
+        .fill(if settings_open { theme.hover_surface } else { theme.surface })
+        .cursor(Pointer)
+        .on_click(move |_| Overlay::toggle_settings_menu(Some(&settings_monitor)))
+        .align_child(Center, Center)
+        .child(
+            Text::new("\u{f0493}") // nf-md-cog
+                .size(17.0)
+                .font(fonts::NERD)
+                .tight()
+                .color(if settings_open { theme.accent } else { theme.text }),
+        );
+
     let settings = Settings::read();
 
     let mut items: Vec<Box<dyn Widget>> = vec![Box::new(Rectangle::new().width(EDGE).height(1.0))];
 
     if settings.flag("bar_logo") {
         items.push(Box::new(logo));
+        items.push(Box::new(settings_button));
     }
 
     Row::new(items)
         .width(width)
         .height(Parent)
-        .gap(10.0)
+        .gap(8.0)
         .justify(Start)
         .align(align)
 }
