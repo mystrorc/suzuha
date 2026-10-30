@@ -477,6 +477,15 @@ fn integrations_tab(theme: &Theme, width: f32) -> Column {
         "integration_zed",
     );
 
+    let strata_row = row_switch(
+        theme,
+        width,
+        "Strata Theme Sync",
+        "Export matching color palette to Strata file manager",
+        settings.flag("integration_strata"),
+        "integration_strata",
+    );
+
     let gtk_row = row_switch(
         theme,
         width,
@@ -495,7 +504,7 @@ fn integrations_tab(theme: &Theme, width: f32) -> Column {
         "integration_terminal",
     );
 
-    Column::new(children![cosmic_row, zed_row, gtk_row, term_row]).gap(8.0)
+    Column::new(children![cosmic_row, zed_row, strata_row, gtk_row, term_row]).gap(8.0)
 }
 
 // ---------------- Helpers: Switch & Choice Rows ----------------

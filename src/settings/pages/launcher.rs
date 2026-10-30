@@ -47,6 +47,34 @@ pub fn build(page: &mut Page) {
 
     page.end_group();
 
+    // Elephant Backend Integration
+    switch::add(
+        page,
+        "launcher_elephant",
+        "Elephant backend",
+        "Integrate Elephant daemon for calculator, open windows, and clipboard",
+    );
+    switch::add(
+        page,
+        "launcher_elephant_calc",
+        "Calculator",
+        "Calculate math expressions right in search (e.g. 2+2, 12*15)",
+    );
+    switch::add(
+        page,
+        "launcher_elephant_windows",
+        "Window switcher",
+        "Search and focus open application windows",
+    );
+    switch::add(
+        page,
+        "launcher_elephant_clipboard",
+        "Clipboard history",
+        "Access clipboard history with c or clip: prefix",
+    );
+
+    page.end_group();
+
     switch::add(page, "launcher_commands", "Command mode", "Enable the > command palette prefix");
     switch::add(page, "command_settings", "Settings command", "Show Settings in command mode");
     switch::add(page, "command_colors", "Color scheme command", "Show Color scheme in command mode");

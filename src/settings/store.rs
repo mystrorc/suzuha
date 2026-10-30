@@ -7,7 +7,7 @@ use std::process::Command;
 use amane::Service;
 
 // every setting and the value it has until changed
-const DEFAULTS: [(&str, &str); 105] = [
+const DEFAULTS: [(&str, &str); 110] = [
     // appearance
     ("blur_strength", "1"),
     ("reduce_transparency", "false"),
@@ -56,7 +56,7 @@ const DEFAULTS: [(&str, &str); 105] = [
     ("follow_wallpaper", "true"),
     // bar
     ("bar_position", "top"),
-    ("bar_height", "40"),
+    ("bar_height", "32"),
     ("bar_auto_hide", "false"),
     ("workspace_style", "pill"),
     ("bar_logo", "true"),
@@ -78,6 +78,10 @@ const DEFAULTS: [(&str, &str); 105] = [
     ("launcher_descriptions", "false"),
     ("launcher_icons", "true"),
     ("launcher_remember_query", "false"),
+    ("launcher_elephant", "true"),
+    ("launcher_elephant_calc", "true"),
+    ("launcher_elephant_windows", "true"),
+    ("launcher_elephant_clipboard", "true"),
     ("launcher_commands", "true"),
     ("command_settings", "true"),
     ("command_colors", "true"),
@@ -128,6 +132,7 @@ const DEFAULTS: [(&str, &str); 105] = [
     ("integration_cava", "false"),
     ("integration_cosmic", "true"),
     ("integration_zed", "true"),
+    ("integration_strata", "true"),
 ];
 
 /*

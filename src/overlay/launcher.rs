@@ -1,3 +1,4 @@
+pub mod elephant;
 mod results;
 pub mod shortcuts;
 
@@ -378,6 +379,13 @@ pub fn ipc(arguments: &[String]) -> String {
 
             search_tmux(&mut overlay);
         }
+        "search" | "query" => {
+            let search_str = arguments.get(1).map(String::as_str).unwrap_or("");
+            show(&mut overlay, None);
+            overlay.query = search_str.to_string();
+            TextInput::set_text(INPUT, search_str);
+            reset_list(&mut overlay);
+        }
         "hide" => overlay.launcher.hide(),
         _ if overlay.launcher.shown => overlay.launcher.hide(),
         _ => show(&mut overlay, monitor_arg),
@@ -597,6 +605,19 @@ fn launch_selected() {
 
         Kind::Tmux(session) => {
             if results::attach(session) && close {
+                overlay.launcher.hide();
+            }
+        }
+
+        Kind::Elephant {
+            provider,
+            identifier,
+            action,
+            value,
+        } => {
+            elephant::activate(provider, identifier, action, value);
+
+            if close {
                 overlay.launcher.hide();
             }
         }

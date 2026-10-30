@@ -1,3 +1,4 @@
+use super::elephant;
 use super::shortcuts;
 
 use std::cell::RefCell;
@@ -11,6 +12,7 @@ use crate::settings::Settings;
 const COMMAND_PREFIX: &str = ">";
 const TMUX_PREFIX: &str = "!";
 
+#[derive(Clone)]
 pub enum Kind {
     // its place in Apps::list()
     App(usize),
@@ -32,8 +34,17 @@ pub enum Kind {
     TmuxCommand,
 
     Tmux(String),
+
+    // Elephant provider action
+    Elephant {
+        provider: String,
+        identifier: String,
+        action: String,
+        value: String,
+    },
 }
 
+#[derive(Clone)]
 pub struct Entry {
     pub name: String,
 
@@ -58,10 +69,37 @@ pub fn empty_text(query: &str) -> &'static str {
         return "No commands found";
     }
 
-    "No applications found"
+    let trimmed = query.trim();
+    if query.starts_with("c ") || trimmed.starts_with("clip:") {
+        return "No clipboard history found";
+    }
+
+    if query.starts_with('?') || query.starts_with("w ") || trimmed.starts_with("web:") {
+        return "No web results found";
+    }
+
+    "No applications or windows found"
+}
+
+thread_local! {
+    static CACHED_RESULTS: RefCell<Option<(String, Vec<Entry>)>> = const { RefCell::new(None) };
 }
 
 pub fn find(query: &str, sessions: &[String]) -> Vec<Entry> {
+    CACHED_RESULTS.with_borrow_mut(|cache| {
+        if let Some((cached_query, items)) = cache.as_ref() {
+            if cached_query == query {
+                return items.clone();
+            }
+        }
+
+        let items = compute_find(query, sessions);
+        *cache = Some((query.to_string(), items.clone()));
+        items
+    })
+}
+
+fn compute_find(query: &str, sessions: &[String]) -> Vec<Entry> {
     if let Some(search) = query.strip_prefix(TMUX_PREFIX) {
         return tmux(&search.trim().to_lowercase(), sessions);
     }
@@ -73,7 +111,44 @@ pub fn find(query: &str, sessions: &[String]) -> Vec<Entry> {
         }
     }
 
-    apps(&query.trim().to_lowercase())
+    let trimmed = query.trim();
+
+    // Clipboard history: "c " or "clip:"
+    if let Some(search) = query.strip_prefix("c ").or_else(|| trimmed.strip_prefix("clip:")) {
+        if elephant::is_available() {
+            return elephant::query_clipboard(search.trim());
+        }
+    }
+
+    // Web search: "?" or "w " or "web:"
+    if let Some(search) = query
+        .strip_prefix('?')
+        .or_else(|| query.strip_prefix("w "))
+        .or_else(|| trimmed.strip_prefix("web:"))
+    {
+        if elephant::is_available() {
+            return elephant::query_websearch(search.trim());
+        }
+    }
+
+    let mut found = Vec::new();
+
+    // Calculator promotion (if looks like math)
+    if elephant::is_available() && elephant::looks_like_math(trimmed) {
+        if let Some(calc_entry) = elephant::query_calc(trimmed) {
+            found.push(calc_entry);
+        }
+    }
+
+    // Standard desktop applications
+    found.extend(apps(&trimmed.to_lowercase()));
+
+    // Open windows matching query
+    if elephant::is_available() && !trimmed.is_empty() {
+        found.extend(elephant::query_windows(trimmed));
+    }
+
+    found
 }
 
 #[derive(Clone)]

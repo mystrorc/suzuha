@@ -5,6 +5,7 @@ mod flux;
 mod gtk;
 mod niri;
 mod spotify;
+mod strata;
 mod terminal;
 mod tmux;
 mod vesktop;
@@ -22,7 +23,7 @@ use crate::settings::Settings;
 use crate::theme::{self, Theme};
 
 // the settings key and the writer of each program that takes the shell's colors
-const PROGRAMS: [(&str, fn(&Theme)); 10] = [
+const PROGRAMS: [(&str, fn(&Theme)); 11] = [
     ("integration_gtk", gtk::export),
     ("integration_flux", flux::export),
     ("integration_terminal", terminal::export),
@@ -33,6 +34,7 @@ const PROGRAMS: [(&str, fn(&Theme)); 10] = [
     ("integration_cava", cava::export),
     ("integration_cosmic", cosmic::export),
     ("integration_zed", zed::export),
+    ("integration_strata", strata::export),
 ];
 
 static LAST_WRITTEN: LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new(String::new()));

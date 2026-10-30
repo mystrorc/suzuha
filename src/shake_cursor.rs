@@ -11,6 +11,13 @@ use crate::settings::Settings;
 
 static SHAKING: AtomicBool = AtomicBool::new(false);
 
+// Tuned parameters for shake detection (reduced sensitivity to prevent accidental triggers)
+const MIN_PACKET_DELTA: i32 = 6;
+const REVERSAL_WINDOW_MS: u64 = 300;
+const IDLE_RESET_MS: u64 = 350;
+const REQUIRED_REVERSALS: u32 = 4;
+const REQUIRED_DISTANCE: i32 = 75;
+
 pub struct ShakeCursor;
 
 impl Service for ShakeCursor {
@@ -36,10 +43,15 @@ fn run_listener() {
             }
         };
 
-        let mut reversals: u32 = 0;
-        let mut last_sign: i8 = 0;
-        let mut last_reversal = Instant::now();
+        let mut x_reversals: u32 = 0;
+        let mut last_x_sign: i8 = 0;
+        let mut last_x_reversal = Instant::now();
         let mut accumulated_dx: i32 = 0;
+
+        let mut y_reversals: u32 = 0;
+        let mut last_y_sign: i8 = 0;
+        let mut last_y_reversal = Instant::now();
+        let mut accumulated_dy: i32 = 0;
 
         while let Ok(count) = file.read(&mut buffer) {
             if count < 3 {
@@ -52,39 +64,78 @@ fn run_listener() {
             }
 
             let mut shake_detected = false;
+            let now = Instant::now();
+
+            if now.duration_since(last_x_reversal) > Duration::from_millis(IDLE_RESET_MS) {
+                x_reversals = 0;
+                accumulated_dx = 0;
+            }
+            if now.duration_since(last_y_reversal) > Duration::from_millis(IDLE_RESET_MS) {
+                y_reversals = 0;
+                accumulated_dy = 0;
+            }
 
             // PS/2 mouse packet is 3 bytes: [flags, dx, dy]
             for chunk in buffer[..count].chunks_exact(3) {
                 let dx = chunk[1] as i8 as i32;
-                if dx.abs() > 10 {
-                    let sign = if dx > 0 { 1 } else { -1 };
-                    let now = Instant::now();
+                let dy = chunk[2] as i8 as i32;
+                let packet_time = Instant::now();
 
-                    if sign != last_sign {
-                        if now.duration_since(last_reversal) < Duration::from_millis(350) {
-                            reversals += 1;
+                // Horizontal movement
+                if dx.abs() >= MIN_PACKET_DELTA {
+                    let sign = if dx > 0 { 1 } else { -1 };
+                    if sign == last_x_sign {
+                        accumulated_dx += dx.abs();
+                    } else {
+                        if packet_time.duration_since(last_x_reversal) < Duration::from_millis(REVERSAL_WINDOW_MS) {
+                            x_reversals += 1;
                             accumulated_dx += dx.abs();
+                            if x_reversals >= REQUIRED_REVERSALS && accumulated_dx >= REQUIRED_DISTANCE {
+                                shake_detected = true;
+                                break;
+                            }
                         } else {
-                            reversals = 1;
+                            x_reversals = 1;
                             accumulated_dx = dx.abs();
                         }
+                        last_x_sign = sign;
+                        last_x_reversal = packet_time;
+                    }
+                }
 
-                        last_sign = sign;
-                        last_reversal = now;
-
-                        if reversals >= 4 && accumulated_dx >= 80 {
-                            shake_detected = true;
-                            reversals = 0;
-                            accumulated_dx = 0;
-                            break;
+                // Vertical movement
+                if dy.abs() >= MIN_PACKET_DELTA {
+                    let sign = if dy > 0 { 1 } else { -1 };
+                    if sign == last_y_sign {
+                        accumulated_dy += dy.abs();
+                    } else {
+                        if packet_time.duration_since(last_y_reversal) < Duration::from_millis(REVERSAL_WINDOW_MS) {
+                            y_reversals += 1;
+                            accumulated_dy += dy.abs();
+                            if y_reversals >= REQUIRED_REVERSALS && accumulated_dy >= REQUIRED_DISTANCE {
+                                shake_detected = true;
+                                break;
+                            }
+                        } else {
+                            y_reversals = 1;
+                            accumulated_dy = dy.abs();
                         }
+                        last_y_sign = sign;
+                        last_y_reversal = packet_time;
                     }
                 }
             }
 
-            if shake_detected && !SHAKING.load(Ordering::SeqCst) {
-                SHAKING.store(true, Ordering::SeqCst);
-                thread::spawn(trigger_shake_effect);
+            if shake_detected {
+                x_reversals = 0;
+                accumulated_dx = 0;
+                y_reversals = 0;
+                accumulated_dy = 0;
+
+                if !SHAKING.load(Ordering::SeqCst) {
+                    SHAKING.store(true, Ordering::SeqCst);
+                    thread::spawn(trigger_shake_effect);
+                }
             }
         }
 
@@ -95,7 +146,11 @@ fn run_listener() {
 fn trigger_shake_effect() {
     let settings = Settings::read();
     let theme = settings.text("cursor_theme").to_string();
-    let normal_size = settings.text("cursor_size").to_string();
+    let normal_size = if settings.text("cursor_size").is_empty() {
+        "24".to_string()
+    } else {
+        settings.text("cursor_size").to_string()
+    };
     drop(settings);
 
     let home = env::var("HOME").unwrap_or_default();
@@ -106,12 +161,7 @@ fn trigger_shake_effect() {
         "cursor {{\n    xcursor-theme \"{theme}\"\n    xcursor-size 64\n}}\n"
     );
     let _ = fs::write(&cursor_kdl, enlarged_config);
-    let _ = Command::new("niri").arg("msg").arg("action").arg("load-config-file").spawn();
-
-    // Trigger locate pointer animation if enabled
-    let _ = Command::new("gsettings")
-        .args(["set", "org.gnome.desktop.interface", "locate-pointer", "true"])
-        .spawn();
+    let _ = Command::new("niri").arg("msg").arg("action").arg("load-config-file").status();
 
     thread::sleep(Duration::from_millis(1200));
 
@@ -120,7 +170,7 @@ fn trigger_shake_effect() {
         "cursor {{\n    xcursor-theme \"{theme}\"\n    xcursor-size {normal_size}\n}}\n"
     );
     let _ = fs::write(&cursor_kdl, normal_config);
-    let _ = Command::new("niri").arg("msg").arg("action").arg("load-config-file").spawn();
+    let _ = Command::new("niri").arg("msg").arg("action").arg("load-config-file").status();
 
     SHAKING.store(false, Ordering::SeqCst);
 }
