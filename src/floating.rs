@@ -4,6 +4,7 @@ mod memory;
 mod placement;
 pub mod sensors;
 pub mod weather;
+pub mod windows;
 
 use std::collections::HashMap;
 use std::time::SystemTime;
@@ -60,12 +61,14 @@ pub fn view(monitor: &Monitor) -> LayerWindow {
         .find(|workspace| workspace.active() && workspace.output() == Some(&monitor.name))
         .is_some_and(|workspace| workspace.windows() == 0);
 
+    let has_half_desktop = windows::DesktopWindows::read().occupied_half(&monitor.name).is_some();
+
     let settings = Settings::read();
 
     let wanted = match settings.text("floating_visibility") {
         "always" => true,
         "hidden" => false,
-        _ => empty,
+        _ => empty || has_half_desktop,
     };
 
     let scale = settings.number("floating_scale");
@@ -202,7 +205,8 @@ fn size(name: Name, scale: f32) -> (f32, f32) {
 /*
  * where every card goes on this screen: the calmest spots on the wallpaper,
  * the remembered ones until it has been read, fixed corners when it can't
- * be or nothing fits, and none while there is nothing to go on yet
+ * be or nothing fits, and none while there is nothing to go on yet.
+ * If an app is open half screen, widgets dynamically adjust to the free side.
  */
 fn spots(
     theme: &Theme,
@@ -212,6 +216,15 @@ fn spots(
     height: f32,
     scale: f32,
 ) -> Option<HashMap<Name, (f32, f32)>> {
+    // If an app is open half screen on this monitor, adjust widgets to the other side
+    if let Some(occupied) = windows::DesktopWindows::read().occupied_half(monitor) {
+        let free_side = match occupied {
+            windows::HalfScreen::Left => windows::HalfScreen::Right,
+            windows::HalfScreen::Right => windows::HalfScreen::Left,
+        };
+        return Some(half_screen_spots(names, width, height, scale, free_side));
+    }
+
     let placement = Placement::read();
 
     let Some(analysis) = placement.analysis() else {
@@ -262,6 +275,72 @@ fn spots(
     memory::remember(monitor, &spots);
 
     Some(spots)
+}
+
+// Arranges widgets into the free half of the screen so they don't sit under half-screen apps
+fn half_screen_spots(
+    names: &[Name],
+    width: f32,
+    height: f32,
+    scale: f32,
+    free_side: windows::HalfScreen,
+) -> HashMap<Name, (f32, f32)> {
+    let mut spots = HashMap::new();
+
+    let (min_x, max_x) = match free_side {
+        windows::HalfScreen::Left => (MARGIN, (width / 2.0) - MARGIN),
+        windows::HalfScreen::Right => ((width / 2.0) + MARGIN, width - MARGIN),
+    };
+
+    let col1_x = min_x;
+    let mut col1_y = MARGIN;
+
+    // Place primary cards (Weather, Calendar) in column 1 (inner/left of the free half)
+    for name in [Name::Weather, Name::Calendar] {
+        if names.contains(&name) {
+            let (_, card_h) = size(name, scale);
+            spots.insert(name, (col1_x, col1_y));
+            col1_y += card_h + GAP;
+        }
+    }
+
+    // Place readings (CPU, GPU, UV, Humidity, AQI) in column 2 (outer/right of the free half)
+    let readings = [
+        Name::CpuTemperature,
+        Name::CpuUsage,
+        Name::GpuTemperature,
+        Name::UvIndex,
+        Name::Humidity,
+        Name::AirQuality,
+    ];
+
+    let reading_w = card::WIDTH * scale;
+    let col2_x = max_x - reading_w;
+    let mut col2_y = MARGIN;
+
+    let (clock_w, clock_h) = size(Name::Clock, scale);
+    let clock_y = height - MARGIN - clock_h;
+
+    for name in readings {
+        if names.contains(&name) {
+            let (_, card_h) = size(name, scale);
+            if col2_y + card_h > clock_y - GAP && col1_y + card_h <= height - MARGIN {
+                spots.insert(name, (col1_x, col1_y));
+                col1_y += card_h + GAP;
+            } else {
+                spots.insert(name, (col2_x, col2_y));
+                col2_y += card_h + GAP;
+            }
+        }
+    }
+
+    // Place the digital clock at the bottom of column 2 (aligned to max_x)
+    if names.contains(&Name::Clock) {
+        let clock_x = max_x - clock_w;
+        spots.insert(Name::Clock, (clock_x, clock_y));
+    }
+
+    spots
 }
 
 // readings top left, weather top right, the air bottom left and the clock bottom right

@@ -87,6 +87,9 @@ fn main() {
     // monitor manager and safety guard
     drop(monitors::MonitorManager::read());
 
+    // window layout tracker for floating desktop widgets adjustment
+    drop(floating::windows::DesktopWindows::read());
+
     App::new()
         .font(fonts::body())
         .window_per_monitor(wallpaper::view)
